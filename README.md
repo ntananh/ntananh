@@ -29,16 +29,13 @@ This is the place where I opensource stuff and break things 🤣
 <br />
 
 
-### 📊 GitHub Stats and Languages:
-
 <a href="https://github.com/n-tananh/n-tananh">
-  <img align="left" alt="Nguyen Tan anh's languages" src="https://github-readme-stats.vercel.app/api/top-langs/?username=n-tananh&hide=html,scss,css,less&layout=compact&theme=tokyonight" />
+  <img align="left" alt="Nguyen Tan anh's languages" width="500px" src="https://github-readme-stats.vercel.app/api/top-langs/?username=n-tananh&hide=html,scss,css,less&layout=compact&theme=tokyonight" />
 </a>
 
-<a href="https://github.com/n-tananh/n-tananh">
-  <img align="right" alt="Nguyen Tan anh's github stats" src="https://github-readme-stats.vercel.app/api?username=n-tananh&show_icons=true&theme=tokyonight&count_private=true&include_all_commits=true" />
-</a>
-
+<!---<a href="https://github.com/n-tananh/n-tananh">
+  <img align="right" alt="Nguyen Tan anh's github stats" width="300px" src="https://github-readme-stats.vercel.app/api?username=n-tananh&show_icons=true&theme=tokyonight&count_private=true&include_all_commits=true" />
+</a> -->
 
 
 [linkedin]: https://www.linkedin.com/in/ntananh/
