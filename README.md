@@ -5,7 +5,7 @@ This is the place where I opensource stuff and break things 🤣
 
 - 🔭 I’m currently studying everything😉
 - 📫 How to reach me: [@ntananh][linkedin] or say 👋 on Email at [Nguyen Tan Anh](mailto:tananh691@gmail.com)
-- ⚡ Fun fact: I ❤️ 🐶 & 😻
+- ⚡ Fun fact: I ❤️ 🐼
 
 ### Connect with me:
 
