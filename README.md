@@ -15,7 +15,7 @@ This is the place where I opensource stuff and break things 🤣
 [<img align="left" alt="ntananh | GitHub" width="28px" src="https://cdn-icons-png.flaticon.com/512/733/733553.png" />][github]
 <br />
 
-<a href="https://github.com/ntananh/ntananh">
+<a href="https://github.com/ntananh">
   <img align="left" alt="Nguyen Tan anh's languages" width="500px" src="https://github-readme-stats.vercel.app/api/top-langs/?username=ntananh&hide=html,scss,css,less&layout=compact&theme=tokyonight" />
 </a>
 
