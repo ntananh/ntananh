@@ -1,10 +1,10 @@
 ### Hi there, I'm Tan Anh or you can call me Tony <img src="https://media.giphy.com/media/hvRJCLFzcasrR4ia7z/giphy.gif" width="25px">
 
 
-This is the place where I opensource stuff and break things 🤣
+This is the place where I open-source stuff and break things 🤣
 
 - 🔭 I’m currently studying everything😉
-- 📫 How to reach me: [@ntananh][linkedin] or say 👋 on Email at [Nguyen Tan Anh](mailto:tananh691@gmail.com)
+- 📫 How to reach me: [@ntananh][linkedin] or say 👋 on Email at [tananh691@gmail.com](mailto:tananh691@gmail.com)
 - ⚡ Fun fact: I ❤️ 🐼
 
 ### Connect with me:
