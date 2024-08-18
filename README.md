@@ -1,16 +1,13 @@
 ### Hi there, I'm Tan Anh or you can call me Tony <img src="https://media.giphy.com/media/hvRJCLFzcasrR4ia7z/giphy.gif" width="25px">
 
 
-This is the place where I open-source stuff and break things 🤣
+This is the place where I open-source stuff.
 
 - 🔭 I’m currently studying everything😉
 - 📫 How to reach me: [@ntananh][linkedin] or say 👋 on Email at [tananh691@gmail.com](mailto:tananh691@gmail.com)
 
 ### Connect with me:
 
-[<img align="left" alt="n_tananh | LinkedIn" width="26px" src="https://cdn-icons-png.flaticon.com/512/174/174857.png" />][linkedin]
-[<img align="left" alt="n_tananh | Instagram" width="26px" src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" />][instagram]
-[<img align="left" alt="n_tananh | Facebook" width="26px" src="https://cdn-icons-png.flaticon.com/512/733/733547.png" />][facebook]
 [<img align="left" alt="ntananh | GitHub" width="28px" src="https://cdn-icons-png.flaticon.com/512/733/733553.png" />][github]
 <br />
 
@@ -24,6 +21,4 @@ This is the place where I open-source stuff and break things 🤣
 
 
 [linkedin]: https://www.linkedin.com/in/ntananh/
-[instagram]: https://www.instagram.com/n_tananh/
-[facebook]: https://www.facebook.com/tananh691
 [github]: https://github.com/ntananh
