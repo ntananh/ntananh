@@ -15,7 +15,7 @@
     .cc {fill: #616e7f;}
     text, tspan {white-space: pre;}
 </style>
-<rect width="1024px" height="512px" fill="#161b22" rx="15"/>
+<rect width="985px" height="530px" fill="#161b22" rx="15"/>
 
 <text x="15" y="30" fill="#c9d1d9" class="ascii">
     <tspan x="15" y="30">                                                                 </tspan>
