@@ -528,7 +528,7 @@ class GitHubStatsGenerator:
         os_text.set("x", str(text_x))
         os_text.set("y", str(y_offset))
         os_text.set("class", "text")
-        os_text.text = "OS: Windows 19, Android 14, Linux"
+        os_text.text = "OS: Linux, Mac"
 
         y_offset += 20
         uptime_text = etree.SubElement(svg, "text")
@@ -543,14 +543,14 @@ class GitHubStatsGenerator:
         host_text.set("x", str(text_x))
         host_text.set("y", str(y_offset))
         host_text.set("class", "text")
-        host_text.text = "Host: TTM Technologies, Inc."
+        host_text.text = "Host: Body"
 
         y_offset += 20
         kernel_text = etree.SubElement(svg, "text")
         kernel_text.set("x", str(text_x))
         kernel_text.set("y", str(y_offset))
         kernel_text.set("class", "text")
-        kernel_text.text = "Kernel: CAM (Computer Aided Manufacturing) Operator"
+        kernel_text.text = "Kernel: Brain"
 
         # Languages
         y_offset += 20
@@ -572,7 +572,7 @@ class GitHubStatsGenerator:
         lang_real_text.set("x", str(text_x))
         lang_real_text.set("y", str(y_offset))
         lang_real_text.set("class", "text")
-        lang_real_text.text = "Languages, Real: English, Spanish"
+        lang_real_text.text = "Languages, Real: English, Vietnamese"
 
         # Hobbies
         y_offset += 20
@@ -580,14 +580,14 @@ class GitHubStatsGenerator:
         hobbies_soft_text.set("x", str(text_x))
         hobbies_soft_text.set("y", str(y_offset))
         hobbies_soft_text.set("class", "text")
-        hobbies_soft_text.text = "Hobbies, Software: Minecraft Modding, iOS Jailbreaking"
+        hobbies_soft_text.text = "Hobbies, Software: Open Source"
 
         y_offset += 20
         hobbies_hard_text = etree.SubElement(svg, "text")
         hobbies_hard_text.set("x", str(text_x))
         hobbies_hard_text.set("y", str(y_offset))
         hobbies_hard_text.set("class", "text")
-        hobbies_hard_text.text = "Hobbies, Hardware: Overclocking, Undervolting"
+        hobbies_hard_text.text = "Hobbies, Hardware: Thingking.."
 
         # Contact
         y_offset += 20
@@ -595,28 +595,22 @@ class GitHubStatsGenerator:
         contact_personal_text.set("x", str(text_x))
         contact_personal_text.set("y", str(y_offset))
         contact_personal_text.set("class", "text")
-        contact_personal_text.text = "Contact, Personal: agrantnmac@gmail.com"
+        contact_personal_text.text = "Contact, Personal: tananh691@gmail.com"
 
-        y_offset += 20
-        contact_work_text = etree.SubElement(svg, "text")
-        contact_work_text.set("x", str(text_x))
-        contact_work_text.set("y", str(y_offset))
-        contact_work_text.set("class", "text")
-        contact_work_text.text = "Email, Work: andrew.grant@softwar.com"
 
         y_offset += 20
         linkedin_text = etree.SubElement(svg, "text")
         linkedin_text.set("x", str(text_x))
         linkedin_text.set("y", str(y_offset))
         linkedin_text.set("class", "text")
-        linkedin_text.text = "LinkedIn: Andrew.Grant@linkedin.com"
+        linkedin_text.text = "LinkedIn: ntananh@linkedin.com"
 
         y_offset += 20
         discord_text = etree.SubElement(svg, "text")
         discord_text.set("x", str(text_x))
         discord_text.set("y", str(y_offset))
         discord_text.set("class", "text")
-        discord_text.text = "Discord: andrew_grant"
+        discord_text.text = "Discord: _unhomie_"
 
         # GitHub Stats
         y_offset += 40
