@@ -16,13 +16,13 @@ class GitHubStatsGenerator:
 
     def __init__(self):
         self.access_token = os.environ.get(
-                'ACCESS_TOKEN', "")
+            'ACCESS_TOKEN', "")
         self.user_name = os.environ.get('USER_NAME', "ntananh")
         self.headers = {'authorization': 'token ' + self.access_token}
         self.owner_id = None  # Will be populated in initialize()
         self.query_count = {'user_getter': 0, 'follower_getter': 0, 'graph_repos_stars': 0,
-                           'recursive_loc': 0, 'graph_commits': 0, 'loc_query': 0}
-        
+                            'recursive_loc': 0, 'graph_commits': 0, 'loc_query': 0}
+
         # Create cache directory if it doesn't exist
         if not os.path.exists('cache'):
             os.makedirs('cache')
@@ -52,12 +52,12 @@ class GitHubStatsGenerator:
     def simple_request(self, func_name, query, variables):
         """Make a GraphQL request to GitHub API"""
         request = requests.post('https://api.github.com/graphql',
-                               json={'query': query, 'variables': variables},
-                               headers=self.headers)
+                                json={'query': query, 'variables': variables},
+                                headers=self.headers)
         if request.status_code == 200:
             return request
         raise Exception(func_name, ' has failed with a', request.status_code,
-                       request.text, self.query_count)
+                        request.text, self.query_count)
 
     def query_count_increment(self, func_id):
         """Track number of API calls by function"""
@@ -77,7 +77,7 @@ class GitHubStatsGenerator:
             }
         }'''
         variables = {'start_date': start_date,
-                    'end_date': end_date, 'login': self.user_name}
+                     'end_date': end_date, 'login': self.user_name}
         request = self.simple_request('graph_commits', query, variables)
         return int(request.json()['data']['user']['contributionsCollection']['contributionCalendar']['totalContributions'])
 
@@ -107,7 +107,7 @@ class GitHubStatsGenerator:
             }
         }'''
         variables = {'owner_affiliation': owner_affiliation,
-                    'login': self.user_name, 'cursor': cursor}
+                     'login': self.user_name, 'cursor': cursor}
         request = self.simple_request('graph_repos_stars', query, variables)
         if count_type == 'repos':
             return request.json()['data']['user']['repositories']['totalCount']
@@ -158,8 +158,8 @@ class GitHubStatsGenerator:
         }'''
         variables = {'repo_name': repo_name, 'owner': owner, 'cursor': cursor}
         request = requests.post('https://api.github.com/graphql',
-                               json={'query': query, 'variables': variables},
-                               headers=self.headers)
+                                json={'query': query, 'variables': variables},
+                                headers=self.headers)
 
         if request.status_code == 200:
             if request.json()['data']['repository']['defaultBranchRef'] is not None:
@@ -177,7 +177,7 @@ class GitHubStatsGenerator:
             raise Exception(
                 'Too many requests in a short amount of time!\nYou\'ve hit the non-documented anti-abuse limit!')
         raise Exception('recursive_loc() has failed with a',
-                       request.status_code, request.text, self.query_count)
+                        request.status_code, request.text, self.query_count)
 
     def loc_counter_one_repo(self, owner, repo_name, data, cache_comment, history, addition_total, deletion_total, my_commits):
         """
@@ -234,7 +234,7 @@ class GitHubStatsGenerator:
             }
         }'''
         variables = {'owner_affiliation': owner_affiliation,
-                    'login': self.user_name, 'cursor': cursor}
+                     'login': self.user_name, 'cursor': cursor}
         request = self.simple_request('loc_query', query, variables)
 
         if request.json()['data']['user']['repositories']['pageInfo']['hasNextPage']:
@@ -413,32 +413,36 @@ class GitHubStatsGenerator:
         """
         try:
             # Download the avatar image
-            response = requests.get(avatar_url, headers=self.headers, timeout=10)
+            response = requests.get(
+                avatar_url, headers=self.headers, timeout=10)
             response.raise_for_status()
-            
+
             # Save the image temporarily
             image_path = f"cache/{self.user_name}_avatar.jpg"
             with open(image_path, 'wb') as f:
                 f.write(response.content)
-            
+
             # Generate ASCII art using ascii_magic
-            art = AsciiArt.from_image(image_path)  # Basic usage without width/columns
-            ascii_art = art.to_ascii(columns=width)  # Use to_ascii() with columns for width control
-            
+            # Basic usage without width/columns
+            art = AsciiArt.from_image(image_path)
+            # Use to_ascii() with columns for width control
+            ascii_art = art.to_ascii(columns=width)
+
             # Clean the ASCII art to remove ANSI escape codes and ensure XML compatibility
             cleaned_art = []
             for line in ascii_art.strip().split('\n'):
                 # Remove ANSI escape codes (e.g., [37m, [32m, etc.)
                 cleaned_line = re.sub(r'\033\[[0-9;]*m', '', line)
                 # Remove control characters and NULL bytes, keep only printable ASCII (codes 32-126)
-                cleaned_line = ''.join(char for char in cleaned_line if ord(char) >= 32 and ord(char) <= 126)
+                cleaned_line = ''.join(char for char in cleaned_line if ord(
+                    char) >= 32 and ord(char) <= 126)
                 if cleaned_line:  # Only keep non-empty lines
                     cleaned_art.append(cleaned_line)
-            
+
             # Clean up temporary file
             if os.path.exists(image_path):
                 os.remove(image_path)
-            
+
             return cleaned_art if cleaned_art else [
                 "   .--.",
                 "  |o_o |",
@@ -448,7 +452,7 @@ class GitHubStatsGenerator:
                 "'/\\---/\\`",
                 "  )=   =(",
             ]
-        
+
         except Exception as e:
             print(f"Error generating ASCII art: {e}")
             return [
@@ -461,39 +465,66 @@ class GitHubStatsGenerator:
                 "  )=   =(",
             ]
 
-
     def create_beautiful_svg(self, filename, user_info, stats):
-        """Create a terminal-style SVG from scratch with user stats and ASCII art from avatar"""
-        # Create the SVG root element
-        nsmap = {None: "http://www.w3.org/2000/svg", 'xlink': 'http://www.w3.org/1999/xlink'}
+        """
+        Create a neofetch-style SVG with a rainbow Apple ASCII logo on the left
+        and system (plus GitHub) info aligned on the right.
+        """
+
+        # -----------------------------------------------------------------------------
+        # 1. Basic Setup and SVG Root
+        # -----------------------------------------------------------------------------
+        nsmap = {
+            None: "http://www.w3.org/2000/svg",
+            'xlink': 'http://www.w3.org/1999/xlink'
+        }
         svg = etree.Element("svg", nsmap=nsmap)
-        svg.set("width", "1000")  # Wider to accommodate ASCII art and text side by side
-        svg.set("height", "800")
-        svg.set("viewBox", "0 0 1000 800")
-        
-        # Define styles (terminal-like with green text on black background)
+        svg.set("width", "800")   # adjust as needed
+        svg.set("height", "500")  # adjust as needed
+        svg.set("viewBox", "0 0 800 500")
+
+        # -----------------------------------------------------------------------------
+        # 2. Define Styles
+        # -----------------------------------------------------------------------------
         style = etree.SubElement(svg, "style")
+        # You can change the background color, text color, font, etc. to your liking.
         style.text = """
             @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');
-            * { font-family: 'Roboto Mono', monospace; }
-            .background { fill: #000000; }
-            .text { fill: #00FF00; font-size: 14px; }
-            .title { fill: #00FF00; font-size: 16px; font-weight: bold; }
-            .value { fill: #00FF00; font-size: 14px; }
-            .ascii { fill: #00FF00; font-size: 12px; }
+            * {
+              font-family: 'Roboto Mono', monospace;
+            }
+            .background {
+              fill: #000000;            /* black terminal background */
+            }
+            .ascii {
+              font-size: 14px;
+              white-space: pre;        /* preserves spacing */
+            }
+            .info {
+              fill: #0DBC79;           /* bright green text (neofetch-like) */
+              font-size: 14px;
+              white-space: pre;
+            }
         """
-        
-        # Background (black terminal)
+
+        # -----------------------------------------------------------------------------
+        # 3. Background Rectangle
+        # -----------------------------------------------------------------------------
         background = etree.SubElement(svg, "rect")
-        background.set("width", "1000")
-        background.set("height", "800")
+        background.set("width", "800")
+        background.set("height", "500")
         background.set("class", "background")
-        
-        # Generate ASCII art from avatar
+
+        # -----------------------------------------------------------------------------
+        # 4. The Rainbow ASCII Apple Logo (multi-line)
+        #
+        #    You can tweak these lines to match your favorite macOS ASCII shape or
+        #    any other ASCII art. This example is close to the one in your screenshot.
+        # -----------------------------------------------------------------------------
         if 'avatarUrl' in user_info:
-            ascii_art_lines = self.generate_ascii_art(user_info['avatarUrl'])
+            ascii_art = self.generate_ascii_art(user_info['avatarUrl'])
         else:
-            ascii_art_lines = [
+            ascii_art = [
                 "   .--.",
                 "  |o_o |",
                 "  |:_/ |",
@@ -503,140 +534,94 @@ class GitHubStatsGenerator:
                 "  )=   =(",
             ]
 
-        # Add ASCII Art (left side, starting at x=50)
-        for i, line in enumerate(ascii_art_lines):
-            text = etree.SubElement(svg, "text")
-            text.set("x", "50")
-            text.set("y", str(50 + i * 15))
-            text.set("class", "ascii")
-            text.text = line  # This should now work with cleaned strings
+        # -----------------------------------------------------------------------------
+        # 5. Rainbow Colors for Each ASCII Line
+        # -----------------------------------------------------------------------------
+        rainbow_colors = [
+            "#F7768E",  # red-pink
+            "#E0AF68",  # orange
+            "#9ECE6A",  # green
+            "#7DCFFF",  # blue
+            "#BD93F9",  # purple
+            "#FF79C6",  # pink
+            "#FFD700",  # gold
+            "#50FA7B",  # bright green
+        ]
 
-        # User Information (right side, starting at x=500)
-        y_offset = 50
-        text_x = 500
+        system_info = [
+            f"{self.user_name}@unmac.local",
+            f"OS: macOS 15.3.1 24D70 arm64",
+            f"Host: MacBookPro18,3",
+            f"Kernel: 24.3.0",
+            f"Uptime: ${ stats['age'] }",
+            f"Packages: 155 (brew)",
+            f"Shell: zsh 5.9",
+            f"DE: Aqua",
+            f"WM: yabai",
+            f"Terminal: tmux",
+            f"Repos: {stats['repos']} (Contributed: {stats['contrib']})",
+            f"Commits: {stats['commits']} | Stars: {stats['stars']}",
+            f"Followers: {stats['followers']} | Following: {stats['following']}",
+            f"Lines of Code: {stats['loc']}  (+{stats['loc_add']}, -{stats['loc_del']})"
+        ]
 
-        # Username
-        username_text = etree.SubElement(svg, "text")
-        username_text.set("x", str(text_x))
-        username_text.set("y", str(y_offset))
-        username_text.set("class", "title")
-        username_text.text = f"{self.user_name} -"
+        # -----------------------------------------------------------------------------
+        # 7. Positioning/Spacing
+        # -----------------------------------------------------------------------------
+        start_x_ascii = 50
+        start_x_info = 300
+        start_y = 60
+        line_height = 18  # spacing between lines
 
-        # OS/Uptime
-        y_offset += 20
-        os_text = etree.SubElement(svg, "text")
-        os_text.set("x", str(text_x))
-        os_text.set("y", str(y_offset))
-        os_text.set("class", "text")
-        os_text.text = "OS: Linux, Mac"
+        max_lines = max(len(ascii_art), len(system_info))
 
-        y_offset += 20
-        uptime_text = etree.SubElement(svg, "text")
-        uptime_text.set("x", str(text_x))
-        uptime_text.set("y", str(y_offset))
-        uptime_text.set("class", "text")
-        uptime_text.text = f"Uptime: {stats['age']}"
+        for i in range(max_lines):
+            ascii_line = ascii_art[i] if i < len(ascii_art) else ""
+            info_line = system_info[i] if i < len(system_info) else ""
 
-        # Host/Kernel
-        y_offset += 20
-        host_text = etree.SubElement(svg, "text")
-        host_text.set("x", str(text_x))
-        host_text.set("y", str(y_offset))
-        host_text.set("class", "text")
-        host_text.text = "Host: Body"
+            # Create a text element for the ASCII
+            ascii_text_el = etree.SubElement(svg, "text")
+            ascii_text_el.set("x", str(start_x_ascii))
+            ascii_text_el.set("y", str(start_y + i * line_height))
+            ascii_text_el.set("class", "ascii")
+            # color each ASCII line in rainbow
+            ascii_text_el.set("fill", rainbow_colors[i % len(rainbow_colors)])
+            ascii_text_el.text = ascii_line
 
-        y_offset += 20
-        kernel_text = etree.SubElement(svg, "text")
-        kernel_text.set("x", str(text_x))
-        kernel_text.set("y", str(y_offset))
-        kernel_text.set("class", "text")
-        kernel_text.text = "Kernel: Brain"
+            # Create a text element for the system info
+            info_text_el = etree.SubElement(svg, "text")
+            info_text_el.set("x", str(start_x_info))
+            info_text_el.set("y", str(start_y + i * line_height))
+            info_text_el.set("class", "info")
+            info_text_el.text = info_line
 
-        # Languages
-        y_offset += 20
-        lang_prog_text = etree.SubElement(svg, "text")
-        lang_prog_text.set("x", str(text_x))
-        lang_prog_text.set("y", str(y_offset))
-        lang_prog_text.set("class", "text")
-        lang_prog_text.text = "Languages, Programming: Java, Python, JavaScript, C++"
+        # -----------------------------------------------------------------------------
+        # 8. Color Bar (like the small squares in neofetch) at the bottom
+        # -----------------------------------------------------------------------------
+        color_bar_y = 420
+        color_bar_x = 50
+        color_width = 40
+        color_height = 15
 
-        y_offset += 20
-        lang_comp_text = etree.SubElement(svg, "text")
-        lang_comp_text.set("x", str(text_x))
-        lang_comp_text.set("y", str(y_offset))
-        lang_comp_text.set("class", "text")
-        lang_comp_text.text = "Languages, Computer: HTML, CSS, JSON, LaTeX, YAML"
+        # Typical neofetch color blocks (adjust to your taste)
+        palette = [
+            "#FFFFFF", "#FF5555", "#50FA7B", "#F1FA8C",
+            "#BD93F9", "#FF79C6", "#8BE9FD", "#BFBFBF",
+        ]
+        for idx, color in enumerate(palette):
+            rect = etree.SubElement(svg, "rect")
+            rect.set("x", str(color_bar_x + idx * (color_width + 5)))
+            rect.set("y", str(color_bar_y))
+            rect.set("width", str(color_width))
+            rect.set("height", str(color_height))
+            rect.set("fill", color)
 
-        y_offset += 20
-        lang_real_text = etree.SubElement(svg, "text")
-        lang_real_text.set("x", str(text_x))
-        lang_real_text.set("y", str(y_offset))
-        lang_real_text.set("class", "text")
-        lang_real_text.text = "Languages, Real: English, Vietnamese"
-
-        # Hobbies
-        y_offset += 20
-        hobbies_soft_text = etree.SubElement(svg, "text")
-        hobbies_soft_text.set("x", str(text_x))
-        hobbies_soft_text.set("y", str(y_offset))
-        hobbies_soft_text.set("class", "text")
-        hobbies_soft_text.text = "Hobbies, Software: Open Source"
-
-        y_offset += 20
-        hobbies_hard_text = etree.SubElement(svg, "text")
-        hobbies_hard_text.set("x", str(text_x))
-        hobbies_hard_text.set("y", str(y_offset))
-        hobbies_hard_text.set("class", "text")
-        hobbies_hard_text.text = "Hobbies, Hardware: Thingking.."
-
-        # Contact
-        y_offset += 20
-        contact_personal_text = etree.SubElement(svg, "text")
-        contact_personal_text.set("x", str(text_x))
-        contact_personal_text.set("y", str(y_offset))
-        contact_personal_text.set("class", "text")
-        contact_personal_text.text = "Contact, Personal: tananh691@gmail.com"
-
-
-        y_offset += 20
-        linkedin_text = etree.SubElement(svg, "text")
-        linkedin_text.set("x", str(text_x))
-        linkedin_text.set("y", str(y_offset))
-        linkedin_text.set("class", "text")
-        linkedin_text.text = "LinkedIn: ntananh@linkedin.com"
-
-        y_offset += 20
-        discord_text = etree.SubElement(svg, "text")
-        discord_text.set("x", str(text_x))
-        discord_text.set("y", str(y_offset))
-        discord_text.set("class", "text")
-        discord_text.text = "Discord: _unhomie_"
-
-        # GitHub Stats
-        y_offset += 40
-        repos_text = etree.SubElement(svg, "text")
-        repos_text.set("x", str(text_x))
-        repos_text.set("y", str(y_offset))
-        repos_text.set("class", "text")
-        repos_text.text = f"Repos: {stats['repos']} (Contributed: {stats['contrib']})"
-
-        y_offset += 20
-        commits_text = etree.SubElement(svg, "text")
-        commits_text.set("x", str(text_x))
-        commits_text.set("y", str(y_offset))
-        commits_text.set("class", "text")
-        commits_text.text = f"Commits: {stats['commits']} | Stars: {stats['stars']} | Followers: {stats['followers']}"
-
-        y_offset += 20
-        loc_text = etree.SubElement(svg, "text")
-        loc_text.set("x", str(text_x))
-        loc_text.set("y", str(y_offset))
-        loc_text.set("class", "text")
-        loc_text.text = f"Lines of Code on GitHub: {stats['loc']} ({stats['loc_add']}+, {stats['loc_del']}-)"
-
-        # Write SVG to file
+        # -----------------------------------------------------------------------------
+        # 9. Write out the SVG
+        # -----------------------------------------------------------------------------
         tree = etree.ElementTree(svg)
-        tree.write(filename, encoding='utf-8', xml_declaration=True, pretty_print=True)
+        tree.write(filename, encoding='utf-8',
+                   xml_declaration=True, pretty_print=True)
 
     def perf_counter(self, func, *args):
         """Measure function execution time"""
@@ -665,7 +650,8 @@ class GitHubStatsGenerator:
         self.formatter('account data', user_time)
 
         # Calculate age
-        birthday = datetime.datetime.strptime(user_info.get('createdAt', '2020-01-01'), '%Y-%m-%dT%H:%M:%SZ')
+        birthday = datetime.datetime.strptime(user_info.get(
+            'createdAt', '2020-01-01'), '%Y-%m-%dT%H:%M:%SZ')
         age_data, age_time = self.perf_counter(self.daily_readme, birthday)
         self.formatter('age calculation', age_time)
 
@@ -683,8 +669,8 @@ class GitHubStatsGenerator:
         repo_data, repo_time = self.perf_counter(
             self.graph_repos_stars, 'repos', ['OWNER'])
         contrib_data, contrib_time = self.perf_counter(self.graph_repos_stars, 'repos', [
-                                                      'OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'])
-        
+            'OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'])
+
         # Get follower stats
         follower_info, follower_time = self.perf_counter(
             self.follower_getter, self.user_name)
@@ -706,7 +692,8 @@ class GitHubStatsGenerator:
             'contrib': f"{'{:,}'.format(contrib_data)}",
             'followers': f"{'{:,}'.format(follower_info['followers'])}",
             'following': f"{'{:,}'.format(follower_info['following'])}",
-            'loc': f"{'{:,}'.format(total_loc[2])}",  # Net LOC (additions - deletions)
+            # Net LOC (additions - deletions)
+            'loc': f"{'{:,}'.format(total_loc[2])}",
             'loc_add': total_loc[0],                  # Total additions
             'loc_del': total_loc[1]                   # Total deletions
         }
@@ -723,7 +710,8 @@ class GitHubStatsGenerator:
             print(f"{key}: {value}")
 
         svg_time_start = time.perf_counter()
-        self.create_beautiful_svg(f"stats_{self.user_name}.svg", user_info, stats)
+        self.create_beautiful_svg(
+            f"stats_{self.user_name}.svg", user_info, stats)
         svg_time = time.perf_counter() - svg_time_start
         self.formatter('SVG generation', svg_time)
 
@@ -740,6 +728,7 @@ class GitHubStatsGenerator:
         print(f"Lines Deleted: {'{:,}'.format(stats['loc_del'])}")
 
         return stats
+
 
 if __name__ == "__main__":
     stats_generator = GitHubStatsGenerator()
