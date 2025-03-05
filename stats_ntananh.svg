@@ -1,0 +1,60 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="800" height="500" viewBox="0 0 800 500">
+  <style>
+            @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&amp;display=swap');
+            * { font-family: 'Roboto', sans-serif; }
+            .background { fill: #0d1117; }
+            .card { fill: #161b22; rx: 10; ry: 10; }
+            .stat-title { fill: #8b949e; font-size: 14px; }
+            .stat-value { fill: #f0f6fc; font-size: 24px; font-weight: bold; }
+            .user-name { fill: #f0f6fc; font-size: 28px; font-weight: bold; }
+            .user-login { fill: #8b949e; font-size: 18px; }
+            .user-bio { fill: #8b949e; font-size: 14px; }
+            .icon { fill: #58a6ff; }
+            .stat-card { filter: drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.1)); }
+            .progress-bg { fill: #30363d; rx: 5; ry: 5; }
+            .progress-fg-add { fill: #238636; rx: 5; ry: 5; }
+            .progress-fg-del { fill: #da3633; rx: 5; ry: 5; }
+            .legend-label { fill: #8b949e; font-size: 12px; }
+        </style>
+  <rect width="800" height="500" class="background"/>
+  <rect x="40" y="40" width="720" height="120" class="card stat-card"/>
+  <defs>
+    <clipPath id="avatar-clip">
+      <circle cx="100" cy="100" r="40"/>
+    </clipPath>
+  </defs>
+  <image x="60" y="60" width="80" height="80" xlink:href="https://avatars.githubusercontent.com/u/69842271?u=6027b3eb95a0dc38b066072f0ee8810d12949895&amp;v=4" clip-path="url(#avatar-clip)"/>
+  <text x="160" y="85" class="user-name">Nguyễn Tấn Anh</text>
+  <text x="160" y="110" class="user-login">@ntananh</text>
+  <text x="160" y="135" class="user-bio"></text>
+  <rect x="40" y="180" width="230" height="90" class="card stat-card"/>
+  <text x="60" y="210" class="stat-title">GitHub Age</text>
+  <text x="60" y="245" class="stat-value">4 years, 6 months, 15 days</text>
+  <rect x="290" y="180" width="230" height="90" class="card stat-card"/>
+  <text x="310" y="210" class="stat-title">Repositories</text>
+  <text x="310" y="245" class="stat-value">36</text>
+  <rect x="540" y="180" width="220" height="90" class="card stat-card"/>
+  <text x="560" y="210" class="stat-title">Stars</text>
+  <text x="560" y="245" class="stat-value">0</text>
+  <rect x="40" y="290" width="230" height="90" class="card stat-card"/>
+  <text x="60" y="320" class="stat-title">Commits</text>
+  <text x="60" y="355" class="stat-value">0</text>
+  <rect x="290" y="290" width="230" height="90" class="card stat-card"/>
+  <text x="310" y="320" class="stat-title">Followers</text>
+  <text x="310" y="355" class="stat-value">15</text>
+  <rect x="540" y="290" width="220" height="90" class="card stat-card"/>
+  <text x="560" y="320" class="stat-title">Following</text>
+  <text x="560" y="355" class="stat-value">49</text>
+  <rect x="40" y="400" width="720" height="80" class="card stat-card"/>
+  <text x="60" y="425" class="stat-title">Lines of Code</text>
+  <text x="60" y="455" class="stat-value">0</text>
+  <rect x="250" y="435" width="480" height="20" class="progress-bg"/>
+  <rect x="250" y="435" width="0" height="20" class="progress-fg-add"/>
+  <rect x="250" y="435" width="480" height="20" class="progress-fg-del"/>
+  <circle cx="270" cy="470" r="5" class="progress-fg-add"/>
+  <text x="280" y="474" class="legend-label">Additions: 0</text>
+  <circle cx="400" cy="470" r="5" class="progress-fg-del"/>
+  <text x="410" y="474" class="legend-label">Deletions: 0</text>
+  <text x="400" y="490" text-anchor="middle" class="legend-label">Generated on 2025-03-06</text>
+</svg>

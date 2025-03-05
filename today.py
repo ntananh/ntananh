@@ -19,7 +19,11 @@ class GitHubStatsGenerator:
         self.headers = {'authorization': 'token ' + self.access_token}
         self.owner_id = None  # Will be populated in initialize()
         self.query_count = {'user_getter': 0, 'follower_getter': 0, 'graph_repos_stars': 0,
-                            'recursive_loc': 0, 'graph_commits': 0, 'loc_query': 0}
+                           'recursive_loc': 0, 'graph_commits': 0, 'loc_query': 0}
+        
+        # Create cache directory if it doesn't exist
+        if not os.path.exists('cache'):
+            os.makedirs('cache')
 
     def initialize(self):
         """Initialize by fetching user data and setting owner_id"""
@@ -46,12 +50,12 @@ class GitHubStatsGenerator:
     def simple_request(self, func_name, query, variables):
         """Make a GraphQL request to GitHub API"""
         request = requests.post('https://api.github.com/graphql',
-                                json={'query': query, 'variables': variables},
-                                headers=self.headers)
+                               json={'query': query, 'variables': variables},
+                               headers=self.headers)
         if request.status_code == 200:
             return request
         raise Exception(func_name, ' has failed with a', request.status_code,
-                        request.text, self.query_count)
+                       request.text, self.query_count)
 
     def query_count_increment(self, func_id):
         """Track number of API calls by function"""
@@ -71,7 +75,7 @@ class GitHubStatsGenerator:
             }
         }'''
         variables = {'start_date': start_date,
-                     'end_date': end_date, 'login': self.user_name}
+                    'end_date': end_date, 'login': self.user_name}
         request = self.simple_request('graph_commits', query, variables)
         return int(request.json()['data']['user']['contributionsCollection']['contributionCalendar']['totalContributions'])
 
@@ -101,7 +105,7 @@ class GitHubStatsGenerator:
             }
         }'''
         variables = {'owner_affiliation': owner_affiliation,
-                     'login': self.user_name, 'cursor': cursor}
+                    'login': self.user_name, 'cursor': cursor}
         request = self.simple_request('graph_repos_stars', query, variables)
         if count_type == 'repos':
             return request.json()['data']['user']['repositories']['totalCount']
@@ -152,8 +156,8 @@ class GitHubStatsGenerator:
         }'''
         variables = {'repo_name': repo_name, 'owner': owner, 'cursor': cursor}
         request = requests.post('https://api.github.com/graphql',
-                                json={'query': query, 'variables': variables},
-                                headers=self.headers)
+                               json={'query': query, 'variables': variables},
+                               headers=self.headers)
 
         if request.status_code == 200:
             if request.json()['data']['repository']['defaultBranchRef'] is not None:
@@ -164,24 +168,23 @@ class GitHubStatsGenerator:
                     addition_total, deletion_total, my_commits
                 )
             else:
-                return 0
+                return 0, 0, 0
 
         self.force_close_file(data, cache_comment)
         if request.status_code == 403:
             raise Exception(
                 'Too many requests in a short amount of time!\nYou\'ve hit the non-documented anti-abuse limit!')
         raise Exception('recursive_loc() has failed with a',
-                        request.status_code, request.text, self.query_count)
+                       request.status_code, request.text, self.query_count)
 
     def loc_counter_one_repo(self, owner, repo_name, data, cache_comment, history, addition_total, deletion_total, my_commits):
         """
         Calculate lines of code statistics for a single repository
-        Fixed bug: self.owner_id is now properly referenced
         """
         for node in history['edges']:
-            # Fix: Check if user exists before checking ID
+            # Check if user exists before checking ID
             if (node['node']['author']['user'] is not None and
-                    node['node']['author']['user'] == self.owner_id):
+                    node['node']['author']['user']['id'] == self.owner_id['id']):
                 my_commits += 1
                 addition_total += node['node']['additions']
                 deletion_total += node['node']['deletions']
@@ -229,7 +232,7 @@ class GitHubStatsGenerator:
             }
         }'''
         variables = {'owner_affiliation': owner_affiliation,
-                     'login': self.user_name, 'cursor': cursor}
+                    'login': self.user_name, 'cursor': cursor}
         request = self.simple_request('loc_query', query, variables)
 
         if request.json()['data']['user']['repositories']['pageInfo']['hasNextPage']:
@@ -291,8 +294,9 @@ class GitHubStatsGenerator:
 
         for line in data:
             loc = line.split()
-            loc_add += int(loc[3])
-            loc_del += int(loc[4])
+            if len(loc) >= 5:  # Make sure we have enough elements
+                loc_add += int(loc[3])
+                loc_del += int(loc[4])
 
         return [loc_add, loc_del, loc_add - loc_del, cached]
 
@@ -326,31 +330,40 @@ class GitHubStatsGenerator:
 
     def add_archive(self):
         """Add archived repository data"""
-        with open('cache/repository_archive.txt', 'r') as f:
-            data = f.readlines()
-        old_data = data
-        data = data[7:len(data) - 3]  # remove the comment block
-        added_loc, deleted_loc, added_commits = 0, 0, 0
-        contributed_repos = len(data)
-        for line in data:
-            repo_hash, total_commits, my_commits, *loc = line.split()
-            added_loc += int(loc[0])
-            deleted_loc += int(loc[1])
-            if my_commits.isdigit():
-                added_commits += int(my_commits)
-        added_commits += int(old_data[-1].split()[4][:-1])
-        return [added_loc, deleted_loc, added_loc - deleted_loc, added_commits, contributed_repos]
+        try:
+            with open('cache/repository_archive.txt', 'r') as f:
+                data = f.readlines()
+            old_data = data
+            data = data[7:len(data) - 3]  # remove the comment block
+            added_loc, deleted_loc, added_commits = 0, 0, 0
+            contributed_repos = len(data)
+            for line in data:
+                repo_hash, total_commits, my_commits, *loc = line.split()
+                added_loc += int(loc[0])
+                deleted_loc += int(loc[1])
+                if my_commits.isdigit():
+                    added_commits += int(my_commits)
+            added_commits += int(old_data[-1].split()[4][:-1])
+            return [added_loc, deleted_loc, added_loc - deleted_loc, added_commits, contributed_repos]
+        except FileNotFoundError:
+            print("Repository archive file not found. Creating empty archive data.")
+            return [0, 0, 0, 0, 0]
 
     def commit_counter(self, comment_size):
         """Count total commits from cache file"""
         total_commits = 0
         filename = f'cache/{hashlib.sha256(self.user_name.encode("utf-8")).hexdigest()}.txt'
-        with open(filename, 'r') as f:
-            data = f.readlines()
-        data = data[comment_size:]  # remove comment lines
-        for line in data:
-            total_commits += int(line.split()[2])
-        return total_commits
+        try:
+            with open(filename, 'r') as f:
+                data = f.readlines()
+            data = data[comment_size:]  # remove comment lines
+            for line in data:
+                parts = line.split()
+                if len(parts) >= 3:  # Make sure we have enough elements
+                    total_commits += int(parts[2])
+            return total_commits
+        except FileNotFoundError:
+            return 0
 
     def user_getter(self, username):
         """Get user ID and creation time"""
@@ -360,11 +373,15 @@ class GitHubStatsGenerator:
             user(login: $login) {
                 id
                 createdAt
+                avatarUrl
+                name
+                bio
             }
         }'''
         variables = {'login': username}
         request = self.simple_request('user_getter', query, variables)
-        return {'id': request.json()['data']['user']['id']}, request.json()['data']['user']['createdAt']
+        user_data = request.json()['data']['user']
+        return {'id': user_data['id']}, user_data
 
     def follower_getter(self, username):
         """Get follower count for user"""
@@ -375,46 +392,229 @@ class GitHubStatsGenerator:
                 followers {
                     totalCount
                 }
+                following {
+                    totalCount
+                }
             }
         }'''
         variables = {'login': username}
         request = self.simple_request('follower_getter', query, variables)
-        return int(request.json()['data']['user']['followers']['totalCount'])
+        user_data = request.json()['data']['user']
+        return {
+            'followers': int(user_data['followers']['totalCount']),
+            'following': int(user_data['following']['totalCount'])
+        }
 
-    def svg_overwrite(self, filename, age_data, commit_data, star_data, repo_data, contrib_data, follower_data, loc_data):
-        """Update SVG file with user statistics"""
-        tree = etree.parse(filename)
-        root = tree.getroot()
-        self.justify_format(root, 'age_data', age_data)
-        self.justify_format(root, 'commit_data', commit_data, 22)
-        self.justify_format(root, 'star_data', star_data, 14)
-        self.justify_format(root, 'repo_data', repo_data, 6)
-        self.justify_format(root, 'contrib_data', contrib_data)
-        self.justify_format(root, 'follower_data', follower_data, 10)
-        self.justify_format(root, 'loc_data', loc_data[2], 9)
-        self.justify_format(root, 'loc_add', loc_data[0])
-        self.justify_format(root, 'loc_del', loc_data[1], 7)
-        tree.write(filename, encoding='utf-8', xml_declaration=True)
-
-    def justify_format(self, root, element_id, new_text, length=0):
-        """Format text and justification dots for SVG elements"""
-        if isinstance(new_text, int):
-            new_text = f"{'{:,}'.format(new_text)}"
-        new_text = str(new_text)
-        self.find_and_replace(root, element_id, new_text)
-        just_len = max(0, length - len(new_text))
-        if just_len <= 2:
-            dot_map = {0: '', 1: ' ', 2: '. '}
-            dot_string = dot_map[just_len]
+    def create_beautiful_svg(self, filename, user_info, stats):
+        """Create a beautiful SVG from scratch with user stats"""
+        # Create the SVG root element
+        nsmap = {None: "http://www.w3.org/2000/svg", 'xlink': 'http://www.w3.org/1999/xlink'}
+        svg = etree.Element("svg", nsmap=nsmap)
+        svg.set("width", "800")
+        svg.set("height", "500")
+        svg.set("viewBox", "0 0 800 500")
+        
+        # Define styles
+        style = etree.SubElement(svg, "style")
+        style.text = """
+            @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
+            * { font-family: 'Roboto', sans-serif; }
+            .background { fill: #0d1117; }
+            .card { fill: #161b22; rx: 10; ry: 10; }
+            .stat-title { fill: #8b949e; font-size: 14px; }
+            .stat-value { fill: #f0f6fc; font-size: 24px; font-weight: bold; }
+            .user-name { fill: #f0f6fc; font-size: 28px; font-weight: bold; }
+            .user-login { fill: #8b949e; font-size: 18px; }
+            .user-bio { fill: #8b949e; font-size: 14px; }
+            .icon { fill: #58a6ff; }
+            .stat-card { filter: drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.1)); }
+            .progress-bg { fill: #30363d; rx: 5; ry: 5; }
+            .progress-fg-add { fill: #238636; rx: 5; ry: 5; }
+            .progress-fg-del { fill: #da3633; rx: 5; ry: 5; }
+            .legend-label { fill: #8b949e; font-size: 12px; }
+        """
+        
+        # Background
+        background = etree.SubElement(svg, "rect")
+        background.set("width", "800")
+        background.set("height", "500")
+        background.set("class", "background")
+        
+        # User card
+        user_card = etree.SubElement(svg, "rect")
+        user_card.set("x", "40")
+        user_card.set("y", "40")
+        user_card.set("width", "720")
+        user_card.set("height", "120")
+        user_card.set("class", "card stat-card")
+        
+        # User avatar (circular clip path)
+        defs = etree.SubElement(svg, "defs")
+        clipPath = etree.SubElement(defs, "clipPath")
+        clipPath.set("id", "avatar-clip")
+        circle = etree.SubElement(clipPath, "circle")
+        circle.set("cx", "100")
+        circle.set("cy", "100")
+        circle.set("r", "40")
+        
+        # User avatar image
+        if 'avatarUrl' in user_info:
+            avatar = etree.SubElement(svg, "image")
+            avatar.set("x", "60")
+            avatar.set("y", "60")
+            avatar.set("width", "80")
+            avatar.set("height", "80")
+            avatar.set("{http://www.w3.org/1999/xlink}href", user_info.get('avatarUrl', ''))
+            avatar.set("clip-path", "url(#avatar-clip)")
+        
+        # User name and info
+        user_name = etree.SubElement(svg, "text")
+        user_name.set("x", "160")
+        user_name.set("y", "85")
+        user_name.set("class", "user-name")
+        user_name.text = user_info.get('name', '') or self.user_name
+        
+        user_login = etree.SubElement(svg, "text")
+        user_login.set("x", "160")
+        user_login.set("y", "110")
+        user_login.set("class", "user-login")
+        user_login.text = f"@{self.user_name}"
+        
+        user_bio = etree.SubElement(svg, "text")
+        user_bio.set("x", "160")
+        user_bio.set("y", "135")
+        user_bio.set("class", "user-bio")
+        user_bio.text = user_info.get('bio', '')[:50] + ('...' if len(user_info.get('bio', '') or '') > 50 else '')
+        
+        # Age
+        age_card = self._create_stat_card(svg, 40, 180, 230, 90, "GitHub Age", stats['age'])
+        
+        # Repositories
+        repo_card = self._create_stat_card(svg, 290, 180, 230, 90, "Repositories", stats['repos'])
+        
+        # Stars
+        star_card = self._create_stat_card(svg, 540, 180, 220, 90, "Stars", stats['stars'])
+        
+        # Commits
+        commit_card = self._create_stat_card(svg, 40, 290, 230, 90, "Commits", stats['commits'])
+        
+        # Followers
+        follower_card = self._create_stat_card(svg, 290, 290, 230, 90, "Followers", stats['followers'])
+        
+        # Following
+        following_card = self._create_stat_card(svg, 540, 290, 220, 90, "Following", stats['following'])
+        
+        # Lines of Code
+        loc_card = etree.SubElement(svg, "rect")
+        loc_card.set("x", "40")
+        loc_card.set("y", "400")
+        loc_card.set("width", "720")
+        loc_card.set("height", "80")
+        loc_card.set("class", "card stat-card")
+        
+        loc_title = etree.SubElement(svg, "text")
+        loc_title.set("x", "60")
+        loc_title.set("y", "425")
+        loc_title.set("class", "stat-title")
+        loc_title.text = "Lines of Code"
+        
+        loc_value = etree.SubElement(svg, "text")
+        loc_value.set("x", "60")
+        loc_value.set("y", "455")
+        loc_value.set("class", "stat-value")
+        loc_value.text = f"{stats['loc']}"
+        
+        # Progress bar for additions and deletions
+        progress_bg = etree.SubElement(svg, "rect")
+        progress_bg.set("x", "250")
+        progress_bg.set("y", "435")
+        progress_bg.set("width", "480")
+        progress_bg.set("height", "20")
+        progress_bg.set("class", "progress-bg")
+        
+        # Calculate proportions for additions and deletions
+        total = stats['loc_add'] + stats['loc_del']
+        if total > 0:
+            add_width = int(480 * (stats['loc_add'] / total))
         else:
-            dot_string = ' ' + ('.' * just_len) + ' '
-        self.find_and_replace(root, f"{element_id}_dots", dot_string)
-
-    def find_and_replace(self, root, element_id, new_text):
-        """Find and update element text in SVG"""
-        element = root.find(f".//*[@id='{element_id}']")
-        if element is not None:
-            element.text = new_text
+            add_width = 0
+            
+        # Addition bar
+        progress_add = etree.SubElement(svg, "rect")
+        progress_add.set("x", "250")
+        progress_add.set("y", "435")
+        progress_add.set("width", str(add_width))
+        progress_add.set("height", "20")
+        progress_add.set("class", "progress-fg-add")
+        
+        # Deletion bar
+        if add_width < 480:
+            progress_del = etree.SubElement(svg, "rect")
+            progress_del.set("x", str(250 + add_width))
+            progress_del.set("y", "435")
+            progress_del.set("width", str(480 - add_width))
+            progress_del.set("height", "20")
+            progress_del.set("class", "progress-fg-del")
+        
+        # Legend for additions and deletions
+        add_circle = etree.SubElement(svg, "circle")
+        add_circle.set("cx", "270")
+        add_circle.set("cy", "470")
+        add_circle.set("r", "5")
+        add_circle.set("class", "progress-fg-add")
+        
+        add_label = etree.SubElement(svg, "text")
+        add_label.set("x", "280")
+        add_label.set("y", "474")
+        add_label.set("class", "legend-label")
+        add_label.text = f"Additions: {stats['loc_add']}"
+        
+        del_circle = etree.SubElement(svg, "circle")
+        del_circle.set("cx", "400")
+        del_circle.set("cy", "470")
+        del_circle.set("r", "5")
+        del_circle.set("class", "progress-fg-del")
+        
+        del_label = etree.SubElement(svg, "text")
+        del_label.set("x", "410")
+        del_label.set("y", "474")
+        del_label.set("class", "legend-label")
+        del_label.text = f"Deletions: {stats['loc_del']}"
+        
+        # Footer
+        footer = etree.SubElement(svg, "text")
+        footer.set("x", "400")
+        footer.set("y", "490")
+        footer.set("text-anchor", "middle")
+        footer.set("class", "legend-label")
+        footer.text = f"Generated on {datetime.datetime.now().strftime('%Y-%m-%d')}"
+        
+        # Write SVG to file
+        tree = etree.ElementTree(svg)
+        tree.write(filename, encoding='utf-8', xml_declaration=True, pretty_print=True)
+        
+    def _create_stat_card(self, svg, x, y, width, height, title, value):
+        """Helper method to create a stat card in the SVG"""
+        card = etree.SubElement(svg, "rect")
+        card.set("x", str(x))
+        card.set("y", str(y))
+        card.set("width", str(width))
+        card.set("height", str(height))
+        card.set("class", "card stat-card")
+        
+        title_elem = etree.SubElement(svg, "text")
+        title_elem.set("x", str(x + 20))
+        title_elem.set("y", str(y + 30))
+        title_elem.set("class", "stat-title")
+        title_elem.text = title
+        
+        value_elem = etree.SubElement(svg, "text")
+        value_elem.set("x", str(x + 20))
+        value_elem.set("y", str(y + 65))
+        value_elem.set("class", "stat-value")
+        value_elem.text = str(value)
+        
+        return card
 
     def perf_counter(self, func, *args):
         """Measure function execution time"""
@@ -439,12 +639,12 @@ class GitHubStatsGenerator:
 
         # Initialize and get user data
         user_data, user_time = self.perf_counter(self.initialize)
-        OWNER_ID, acc_date = user_data
+        OWNER_ID, user_info = user_data
         self.formatter('account data', user_time)
 
         # Calculate age
-        age_data, age_time = self.perf_counter(
-            self.daily_readme, datetime.datetime(2001, 6, 9))
+        birthday = datetime.datetime.strptime(user_info.get('createdAt', '2020-01-01'), '%Y-%m-%dT%H:%M:%SZ')
+        age_data, age_time = self.perf_counter(self.daily_readme, birthday)
         self.formatter('age calculation', age_time)
 
         # Get LOC stats
@@ -462,46 +662,64 @@ class GitHubStatsGenerator:
         repo_data, repo_time = self.perf_counter(
             self.graph_repos_stars, 'repos', ['OWNER'])
         contrib_data, contrib_time = self.perf_counter(self.graph_repos_stars, 'repos', [
-                                                       'OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'])
-        follower_data, follower_time = self.perf_counter(
+                                                      'OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'])
+        
+        # Get follower stats
+        follower_info, follower_time = self.perf_counter(
             self.follower_getter, self.user_name)
 
         # Add archived repository data for specific user
-        if self.owner_id == {'id': OWNER_ID}:  # only calculate for user ntananh
+        if self.owner_id == {'id': OWNER_ID}:  # only calculate for specific user
             archived_data = self.add_archive()
             for index in range(len(total_loc) - 1):
                 total_loc[index] += archived_data[index]
             contrib_data += archived_data[-1]
             commit_data += int(archived_data[-2])
 
-        # Format LOC data
-        for index in range(len(total_loc) - 1):
-            total_loc[index] = '{:,}'.format(total_loc[index])
+        # Create stats dictionary
+        stats = {
+            'age': age_data,
+            'commits': f"{'{:,}'.format(commit_data)}",
+            'stars': f"{'{:,}'.format(star_data)}",
+            'repos': f"{'{:,}'.format(repo_data)}",
+            'contrib': f"{'{:,}'.format(contrib_data)}",
+            'followers': f"{'{:,}'.format(follower_info['followers'])}",
+            'following': f"{'{:,}'.format(follower_info['following'])}",
+            'loc': f"{'{:,}'.format(total_loc[2])}",  # Net LOC (additions - deletions)
+            'loc_add': total_loc[0],                  # Total additions
+            'loc_del': total_loc[1]                   # Total deletions
+        }
 
-        # Update SVG files
-        self.svg_overwrite('dark_mode.svg', age_data, commit_data, star_data,
-                           repo_data, contrib_data, follower_data, total_loc[:-1])
-        self.svg_overwrite('light_mode.svg', age_data, commit_data, star_data,
-                           repo_data, contrib_data, follower_data, total_loc[:-1])
+        # Format and print remaining stats
+        self.formatter('commit counter', commit_time)
+        self.formatter('stars counter', star_time)
+        self.formatter('repo counter', repo_time)
+        self.formatter('contrib counter', contrib_time)
+        self.formatter('follower stats', follower_time)
 
-        # Print summary statistics
-        total_time = user_time + age_time + loc_time + commit_time + \
-            star_time + repo_time + contrib_time + follower_time
-        print('\033[F\033[F\033[F\033[F\033[F\033[F\033[F\033[F',
-              '{:<21}'.format('Total function time:'), '{:>11}'.format(
-                  '%.4f' % total_time),
-              ' s \033[E\033[E\033[E\033[E\033[E\033[E\033[E\033[E', sep='')
+        print(f"\nTotal API queries: {sum(self.query_count.values())}")
+        for key, value in self.query_count.items():
+            print(f"{key}: {value}")
 
-        print('Total GitHub GraphQL API calls:',
-              '{:>3}'.format(sum(self.query_count.values())))
-        for func_name, count in self.query_count.items():
-            print('{:<28}'.format('   ' + func_name + ':'),
-                  '{:>6}'.format(count))
+        svg_time_start = time.perf_counter()
+        self.create_beautiful_svg(f"stats_{self.user_name}.svg", user_info, stats)
+        svg_time = time.perf_counter() - svg_time_start
+        self.formatter('SVG generation', svg_time)
 
+        print('\nGitHub Stats Summary:')
+        print(f"Username: {self.user_name}")
+        print(f"GitHub Age: {stats['age']}")
+        print(f"Repositories: {stats['repos']}")
+        print(f"Stars: {stats['stars']}")
+        print(f"Commits: {stats['commits']}")
+        print(f"Followers: {stats['followers']}")
+        print(f"Following: {stats['following']}")
+        print(f"Lines of Code (net): {stats['loc']}")
+        print(f"Lines Added: {'{:,}'.format(stats['loc_add'])}")
+        print(f"Lines Deleted: {'{:,}'.format(stats['loc_del'])}")
 
-if __name__ == '__main__':
-    """
-    GitHub stats generator for Tan Anh (ntananh) 
-    """
-    generator = GitHubStatsGenerator()
-    generator.run()
+        return stats
+
+if __name__ == "__main__":
+    stats_generator = GitHubStatsGenerator()
+    stats = stats_generator.run()
