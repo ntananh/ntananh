@@ -1,51 +1,74 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1000" height="800" viewBox="0 0 1000 800">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="800" height="500" viewBox="0 0 800 500">
   <style>
             @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&amp;display=swap');
-            * { font-family: 'Roboto Mono', monospace; }
-            .background { fill: #000000; }
-            .text { fill: #00FF00; font-size: 14px; }
-            .title { fill: #00FF00; font-size: 16px; font-weight: bold; }
-            .value { fill: #00FF00; font-size: 14px; }
-            .ascii { fill: #00FF00; font-size: 12px; }
+            * {
+              font-family: 'Roboto Mono', monospace;
+            }
+            .background {
+              fill: #000000;            /* black terminal background */
+            }
+            .ascii {
+              font-size: 14px;
+              white-space: pre;        /* preserves spacing */
+            }
+            .info {
+              fill: #0DBC79;           /* bright green text (neofetch-like) */
+              font-size: 14px;
+              white-space: pre;
+            }
         </style>
-  <rect width="1000" height="800" class="background"/>
-  <text x="50" y="50" class="ascii">QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ</text>
-  <text x="50" y="65" class="ascii">QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ</text>
-  <text x="50" y="80" class="ascii">QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ</text>
-  <text x="50" y="95" class="ascii">QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ</text>
-  <text x="50" y="110" class="ascii">QQQQQQQQQQQQQQQQQQQQN@AGEggghEXEg@0QQQQQQQQQQQQQQQ</text>
-  <text x="50" y="125" class="ascii">QQQQQQQQQQQQQQQQQQDPggdmpppmqqq5nzupYWQQQQQQQQQQQQ</text>
-  <text x="50" y="140" class="ascii">QQQQQQQQQQQQQQQQRXdbVJufqqmmmSm2fCj1[7mDQQQQQQQQQQ</text>
-  <text x="50" y="155" class="ascii">QQQQQQQQQQQQN@Abgghg62w2mmqSm5FSF5#oe!{e&amp;QQQQQQQQQ</text>
-  <text x="50" y="170" class="ascii">QQQQQQQQQQkFJL#w3F5pmp22ywJ####T#2ynnz?r3QQQQQQQQQ</text>
-  <text x="50" y="185" class="ascii">QQQQQQQQQQ86J7?*I]7T#TLunTJCCwwwCTLao#eljRQQQQQQQQ</text>
-  <text x="50" y="200" class="ascii">QQQQQQQQQQQQMKbhCTnJ2yfwwC###TTJwfwj1?*rLQQQQQQQQQ</text>
-  <text x="50" y="215" class="ascii">QQQQQQQQQQQQQQQMZA6#5E5TTwwJwCwj[1ouLt!*}S0QQQQQQQ</text>
-  <text x="50" y="230" class="ascii">QQQQQQQQQQQQQQQXDRB@&amp;DAdEZu#66q7%!zf6er{{rfMQQQQQQ</text>
-  <text x="50" y="245" class="ascii">QQQQQQQQQQQQQQQhD0HgDNRNBB@8AbEm56CFgIcrrr}gQQQQQQ</text>
-  <text x="50" y="260" class="ascii">QQQQQQQQQQQQQQQUkBKZPDRMRQQMUkYGEqhyCdEgSgGBQQQQQQ</text>
-  <text x="50" y="275" class="ascii">QQQQQQQQQQQQQQQ0X8AYDHNMRRB&amp;bGGGkpCYQQQQQQQQQQQQQQ</text>
-  <text x="50" y="290" class="ascii">QQQQQQQQQQQQQQQQB4$UHHK8GhSgdE&amp;WAmRQQQQQQQQQQQQQQQ</text>
-  <text x="50" y="305" class="ascii">QQQQQQQQQQQQQQQQQNK@88Uu?f4Y8HBMhGQQQQQQQQQQQQQQQQ</text>
-  <text x="50" y="320" class="ascii">QQQQQQQQQQQQQQQQQQQQQQWfgA@DGZ@Db@0QQQQQQQQQQQQQQQ</text>
-  <text x="50" y="335" class="ascii">QQQQQQQQQQQQQQQQQQQQQQRBDBWWDBBBMRR0QQQQQQQQQQQQQQ</text>
-  <text x="50" y="350" class="ascii">QQQQQQQQQQQQQQQQQQQQQQQQ0RRRRR00QQQQQQQQQQQQQQQQQQ</text>
-  <text x="50" y="365" class="ascii">QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ</text>
-  <text x="500" y="50" class="title">ntananh -</text>
-  <text x="500" y="70" class="text">OS: Linux, Mac</text>
-  <text x="500" y="90" class="text">Uptime: 4 years, 6 months, 15 days</text>
-  <text x="500" y="110" class="text">Host: Body</text>
-  <text x="500" y="130" class="text">Kernel: Brain</text>
-  <text x="500" y="150" class="text">Languages, Programming: Java, Python, JavaScript, C++</text>
-  <text x="500" y="170" class="text">Languages, Computer: HTML, CSS, JSON, LaTeX, YAML</text>
-  <text x="500" y="190" class="text">Languages, Real: English, Vietnamese</text>
-  <text x="500" y="210" class="text">Hobbies, Software: Open Source</text>
-  <text x="500" y="230" class="text">Hobbies, Hardware: Thingking..</text>
-  <text x="500" y="250" class="text">Contact, Personal: tananh691@gmail.com</text>
-  <text x="500" y="270" class="text">LinkedIn: ntananh@linkedin.com</text>
-  <text x="500" y="290" class="text">Discord: _unhomie_</text>
-  <text x="500" y="330" class="text">Repos: 36 (Contributed: 36)</text>
-  <text x="500" y="350" class="text">Commits: 484 | Stars: 0 | Followers: 15</text>
-  <text x="500" y="370" class="text">Lines of Code on GitHub: 665,884 (691753+, 25869-)</text>
+  <rect width="800" height="500" class="background"/>
+  <text x="50" y="60" class="ascii" fill="#F7768E">QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ</text>
+  <text x="300" y="60" class="info">ntananh@unmac.local</text>
+  <text x="50" y="78" class="ascii" fill="#E0AF68">QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ</text>
+  <text x="300" y="78" class="info">OS: macOS 15.3.1 24D70 arm64</text>
+  <text x="50" y="96" class="ascii" fill="#9ECE6A">QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ</text>
+  <text x="300" y="96" class="info">Host: MacBookPro18,3</text>
+  <text x="50" y="114" class="ascii" fill="#7DCFFF">QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ</text>
+  <text x="300" y="114" class="info">Kernel: 24.3.0</text>
+  <text x="50" y="132" class="ascii" fill="#BD93F9">QQQQQQQQQQQQQQQQQQQQN@AGEggghEXEg@0QQQQQQQQQQQQQQQ</text>
+  <text x="300" y="132" class="info">Uptime: $4 years, 6 months, 15 days</text>
+  <text x="50" y="150" class="ascii" fill="#FF79C6">QQQQQQQQQQQQQQQQQQDPggdmpppmqqq5nzupYWQQQQQQQQQQQQ</text>
+  <text x="300" y="150" class="info">Packages: 155 (brew)</text>
+  <text x="50" y="168" class="ascii" fill="#FFD700">QQQQQQQQQQQQQQQQRXdbVJufqqmmmSm2fCj1[7mDQQQQQQQQQQ</text>
+  <text x="300" y="168" class="info">Shell: zsh 5.9</text>
+  <text x="50" y="186" class="ascii" fill="#50FA7B">QQQQQQQQQQQQN@Abgghg62w2mmqSm5FSF5#oe!{e&amp;QQQQQQQQQ</text>
+  <text x="300" y="186" class="info">DE: Aqua</text>
+  <text x="50" y="204" class="ascii" fill="#F7768E">QQQQQQQQQQkFJL#w3F5pmp22ywJ####T#2ynnz?r3QQQQQQQQQ</text>
+  <text x="300" y="204" class="info">WM: yabai</text>
+  <text x="50" y="222" class="ascii" fill="#E0AF68">QQQQQQQQQQ86J7?*I]7T#TLunTJCCwwwCTLao#eljRQQQQQQQQ</text>
+  <text x="300" y="222" class="info">Terminal: tmux</text>
+  <text x="50" y="240" class="ascii" fill="#9ECE6A">QQQQQQQQQQQQMKbhCTnJ2yfwwC###TTJwfwj1?*rLQQQQQQQQQ</text>
+  <text x="300" y="240" class="info">Repos: 36 (Contributed: 36)</text>
+  <text x="50" y="258" class="ascii" fill="#7DCFFF">QQQQQQQQQQQQQQQMZA6#5E5TTwwJwCwj[1ouLt!*}S0QQQQQQQ</text>
+  <text x="300" y="258" class="info">Commits: 484 | Stars: 0</text>
+  <text x="50" y="276" class="ascii" fill="#BD93F9">QQQQQQQQQQQQQQQXDRB@&amp;DAdEZu#66q7%!zf6er{{rfMQQQQQQ</text>
+  <text x="300" y="276" class="info">Followers: 15 | Following: 49</text>
+  <text x="50" y="294" class="ascii" fill="#FF79C6">QQQQQQQQQQQQQQQhD0HgDNRNBB@8AbEm56CFgIcrrr}gQQQQQQ</text>
+  <text x="300" y="294" class="info">Lines of Code: 665,884  (+691753, -25869)</text>
+  <text x="50" y="312" class="ascii" fill="#FFD700">QQQQQQQQQQQQQQQUkBKZPDRMRQQMUkYGEqhyCdEgSgGBQQQQQQ</text>
+  <text x="300" y="312" class="info"></text>
+  <text x="50" y="330" class="ascii" fill="#50FA7B">QQQQQQQQQQQQQQQ0X8AYDHNMRRB&amp;bGGGkpCYQQQQQQQQQQQQQQ</text>
+  <text x="300" y="330" class="info"></text>
+  <text x="50" y="348" class="ascii" fill="#F7768E">QQQQQQQQQQQQQQQQB4$UHHK8GhSgdE&amp;WAmRQQQQQQQQQQQQQQQ</text>
+  <text x="300" y="348" class="info"></text>
+  <text x="50" y="366" class="ascii" fill="#E0AF68">QQQQQQQQQQQQQQQQQNK@88Uu?f4Y8HBMhGQQQQQQQQQQQQQQQQ</text>
+  <text x="300" y="366" class="info"></text>
+  <text x="50" y="384" class="ascii" fill="#9ECE6A">QQQQQQQQQQQQQQQQQQQQQQWfgA@DGZ@Db@0QQQQQQQQQQQQQQQ</text>
+  <text x="300" y="384" class="info"></text>
+  <text x="50" y="402" class="ascii" fill="#7DCFFF">QQQQQQQQQQQQQQQQQQQQQQRBDBWWDBBBMRR0QQQQQQQQQQQQQQ</text>
+  <text x="300" y="402" class="info"></text>
+  <text x="50" y="420" class="ascii" fill="#BD93F9">QQQQQQQQQQQQQQQQQQQQQQQQ0RRRRR00QQQQQQQQQQQQQQQQQQ</text>
+  <text x="300" y="420" class="info"></text>
+  <text x="50" y="438" class="ascii" fill="#FF79C6">QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ</text>
+  <text x="300" y="438" class="info"></text>
+  <rect x="50" y="420" width="40" height="15" fill="#FFFFFF"/>
+  <rect x="95" y="420" width="40" height="15" fill="#FF5555"/>
+  <rect x="140" y="420" width="40" height="15" fill="#50FA7B"/>
+  <rect x="185" y="420" width="40" height="15" fill="#F1FA8C"/>
+  <rect x="230" y="420" width="40" height="15" fill="#BD93F9"/>
+  <rect x="275" y="420" width="40" height="15" fill="#FF79C6"/>
+  <rect x="320" y="420" width="40" height="15" fill="#8BE9FD"/>
+  <rect x="365" y="420" width="40" height="15" fill="#BFBFBF"/>
 </svg>
