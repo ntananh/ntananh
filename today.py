@@ -1,3 +1,4 @@
+import re
 import datetime
 from dateutil import relativedelta
 import requests
@@ -406,10 +407,9 @@ class GitHubStatsGenerator:
             'following': int(user_data['following']['totalCount'])
         }
 
-
     def generate_ascii_art(self, avatar_url, width=50, height=30):
         """
-        Download the avatar and convert it to ASCII art, ensuring XML compatibility.
+        Download the avatar and convert it to ASCII art, ensuring XML compatibility by removing ANSI codes.
         """
         try:
             # Download the avatar image
@@ -425,11 +425,13 @@ class GitHubStatsGenerator:
             art = AsciiArt.from_image(image_path)  # Basic usage without width/columns
             ascii_art = art.to_ascii(columns=width)  # Use to_ascii() with columns for width control
             
-            # Clean the ASCII art to ensure XML compatibility
+            # Clean the ASCII art to remove ANSI escape codes and ensure XML compatibility
             cleaned_art = []
             for line in ascii_art.strip().split('\n'):
-                # Remove control characters and NULL bytes, keep only printable ASCII
-                cleaned_line = ''.join(char for char in line if ord(char) >= 32 and ord(char) <= 126)
+                # Remove ANSI escape codes (e.g., [37m, [32m, etc.)
+                cleaned_line = re.sub(r'\033\[[0-9;]*m', '', line)
+                # Remove control characters and NULL bytes, keep only printable ASCII (codes 32-126)
+                cleaned_line = ''.join(char for char in cleaned_line if ord(char) >= 32 and ord(char) <= 126)
                 if cleaned_line:  # Only keep non-empty lines
                     cleaned_art.append(cleaned_line)
             
@@ -458,6 +460,7 @@ class GitHubStatsGenerator:
                 "'/\\---/\\`",
                 "  )=   =(",
             ]
+
 
     def create_beautiful_svg(self, filename, user_info, stats):
         """Create a terminal-style SVG from scratch with user stats and ASCII art from avatar"""
