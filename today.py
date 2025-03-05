@@ -5,6 +5,7 @@ import os
 from lxml import etree
 import time
 import hashlib
+from ascii_magic import AsciiArt
 
 
 class GitHubStatsGenerator:
@@ -14,7 +15,7 @@ class GitHubStatsGenerator:
 
     def __init__(self):
         self.access_token = os.environ.get(
-            'ACCESS_TOKEN', "")
+                'ACCESS_TOKEN', "")
         self.user_name = os.environ.get('USER_NAME', "ntananh")
         self.headers = {'authorization': 'token ' + self.access_token}
         self.owner_id = None  # Will be populated in initialize()
@@ -405,216 +406,240 @@ class GitHubStatsGenerator:
             'following': int(user_data['following']['totalCount'])
         }
 
+
+    def generate_ascii_art(self, avatar_url, width=50, height=30):
+        """
+        Download the avatar and convert it to ASCII art, ensuring XML compatibility.
+        """
+        try:
+            # Download the avatar image
+            response = requests.get(avatar_url, headers=self.headers, timeout=10)
+            response.raise_for_status()
+            
+            # Save the image temporarily
+            image_path = f"cache/{self.user_name}_avatar.jpg"
+            with open(image_path, 'wb') as f:
+                f.write(response.content)
+            
+            # Generate ASCII art using ascii_magic
+            art = AsciiArt.from_image(image_path)  # Basic usage without width/columns
+            ascii_art = art.to_ascii(columns=width)  # Use to_ascii() with columns for width control
+            
+            # Clean the ASCII art to ensure XML compatibility
+            cleaned_art = []
+            for line in ascii_art.strip().split('\n'):
+                # Remove control characters and NULL bytes, keep only printable ASCII
+                cleaned_line = ''.join(char for char in line if ord(char) >= 32 and ord(char) <= 126)
+                if cleaned_line:  # Only keep non-empty lines
+                    cleaned_art.append(cleaned_line)
+            
+            # Clean up temporary file
+            if os.path.exists(image_path):
+                os.remove(image_path)
+            
+            return cleaned_art if cleaned_art else [
+                "   .--.",
+                "  |o_o |",
+                "  |:_/ |",
+                "  //   \\ \\",
+                " (|     | )",
+                "'/\\---/\\`",
+                "  )=   =(",
+            ]
+        
+        except Exception as e:
+            print(f"Error generating ASCII art: {e}")
+            return [
+                "   .--.",
+                "  |o_o |",
+                "  |:_/ |",
+                "  //   \\ \\",
+                " (|     | )",
+                "'/\\---/\\`",
+                "  )=   =(",
+            ]
+
     def create_beautiful_svg(self, filename, user_info, stats):
-        """Create a beautiful SVG from scratch with user stats"""
+        """Create a terminal-style SVG from scratch with user stats and ASCII art from avatar"""
         # Create the SVG root element
         nsmap = {None: "http://www.w3.org/2000/svg", 'xlink': 'http://www.w3.org/1999/xlink'}
         svg = etree.Element("svg", nsmap=nsmap)
-        svg.set("width", "800")
-        svg.set("height", "500")
-        svg.set("viewBox", "0 0 800 500")
+        svg.set("width", "1000")  # Wider to accommodate ASCII art and text side by side
+        svg.set("height", "800")
+        svg.set("viewBox", "0 0 1000 800")
         
-        # Define styles
+        # Define styles (terminal-like with green text on black background)
         style = etree.SubElement(svg, "style")
         style.text = """
-            @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
-            * { font-family: 'Roboto', sans-serif; }
-            .background { fill: #0d1117; }
-            .card { fill: #161b22; rx: 10; ry: 10; }
-            .stat-title { fill: #8b949e; font-size: 14px; }
-            .stat-value { fill: #f0f6fc; font-size: 24px; font-weight: bold; }
-            .user-name { fill: #f0f6fc; font-size: 28px; font-weight: bold; }
-            .user-login { fill: #8b949e; font-size: 18px; }
-            .user-bio { fill: #8b949e; font-size: 14px; }
-            .icon { fill: #58a6ff; }
-            .stat-card { filter: drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.1)); }
-            .progress-bg { fill: #30363d; rx: 5; ry: 5; }
-            .progress-fg-add { fill: #238636; rx: 5; ry: 5; }
-            .progress-fg-del { fill: #da3633; rx: 5; ry: 5; }
-            .legend-label { fill: #8b949e; font-size: 12px; }
+            @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');
+            * { font-family: 'Roboto Mono', monospace; }
+            .background { fill: #000000; }
+            .text { fill: #00FF00; font-size: 14px; }
+            .title { fill: #00FF00; font-size: 16px; font-weight: bold; }
+            .value { fill: #00FF00; font-size: 14px; }
+            .ascii { fill: #00FF00; font-size: 12px; }
         """
         
-        # Background
+        # Background (black terminal)
         background = etree.SubElement(svg, "rect")
-        background.set("width", "800")
-        background.set("height", "500")
+        background.set("width", "1000")
+        background.set("height", "800")
         background.set("class", "background")
         
-        # User card
-        user_card = etree.SubElement(svg, "rect")
-        user_card.set("x", "40")
-        user_card.set("y", "40")
-        user_card.set("width", "720")
-        user_card.set("height", "120")
-        user_card.set("class", "card stat-card")
-        
-        # User avatar (circular clip path)
-        defs = etree.SubElement(svg, "defs")
-        clipPath = etree.SubElement(defs, "clipPath")
-        clipPath.set("id", "avatar-clip")
-        circle = etree.SubElement(clipPath, "circle")
-        circle.set("cx", "100")
-        circle.set("cy", "100")
-        circle.set("r", "40")
-        
-        # User avatar image
+        # Generate ASCII art from avatar
         if 'avatarUrl' in user_info:
-            avatar = etree.SubElement(svg, "image")
-            avatar.set("x", "60")
-            avatar.set("y", "60")
-            avatar.set("width", "80")
-            avatar.set("height", "80")
-            avatar.set("{http://www.w3.org/1999/xlink}href", user_info.get('avatarUrl', ''))
-            avatar.set("clip-path", "url(#avatar-clip)")
-        
-        # User name and info
-        user_name = etree.SubElement(svg, "text")
-        user_name.set("x", "160")
-        user_name.set("y", "85")
-        user_name.set("class", "user-name")
-        user_name.text = user_info.get('name', '') or self.user_name
-        
-        user_login = etree.SubElement(svg, "text")
-        user_login.set("x", "160")
-        user_login.set("y", "110")
-        user_login.set("class", "user-login")
-        user_login.text = f"@{self.user_name}"
-        
-        user_bio = etree.SubElement(svg, "text")
-        user_bio.set("x", "160")
-        user_bio.set("y", "135")
-        user_bio.set("class", "user-bio")
-        user_bio.text = user_info.get('bio', '')[:50] + ('...' if len(user_info.get('bio', '') or '') > 50 else '')
-        
-        # Age
-        age_card = self._create_stat_card(svg, 40, 180, 230, 90, "GitHub Age", stats['age'])
-        
-        # Repositories
-        repo_card = self._create_stat_card(svg, 290, 180, 230, 90, "Repositories", stats['repos'])
-        
-        # Stars
-        star_card = self._create_stat_card(svg, 540, 180, 220, 90, "Stars", stats['stars'])
-        
-        # Commits
-        commit_card = self._create_stat_card(svg, 40, 290, 230, 90, "Commits", stats['commits'])
-        
-        # Followers
-        follower_card = self._create_stat_card(svg, 290, 290, 230, 90, "Followers", stats['followers'])
-        
-        # Following
-        following_card = self._create_stat_card(svg, 540, 290, 220, 90, "Following", stats['following'])
-        
-        # Lines of Code
-        loc_card = etree.SubElement(svg, "rect")
-        loc_card.set("x", "40")
-        loc_card.set("y", "400")
-        loc_card.set("width", "720")
-        loc_card.set("height", "80")
-        loc_card.set("class", "card stat-card")
-        
-        loc_title = etree.SubElement(svg, "text")
-        loc_title.set("x", "60")
-        loc_title.set("y", "425")
-        loc_title.set("class", "stat-title")
-        loc_title.text = "Lines of Code"
-        
-        loc_value = etree.SubElement(svg, "text")
-        loc_value.set("x", "60")
-        loc_value.set("y", "455")
-        loc_value.set("class", "stat-value")
-        loc_value.text = f"{stats['loc']}"
-        
-        # Progress bar for additions and deletions
-        progress_bg = etree.SubElement(svg, "rect")
-        progress_bg.set("x", "250")
-        progress_bg.set("y", "435")
-        progress_bg.set("width", "480")
-        progress_bg.set("height", "20")
-        progress_bg.set("class", "progress-bg")
-        
-        # Calculate proportions for additions and deletions
-        total = stats['loc_add'] + stats['loc_del']
-        if total > 0:
-            add_width = int(480 * (stats['loc_add'] / total))
+            ascii_art_lines = self.generate_ascii_art(user_info['avatarUrl'])
         else:
-            add_width = 0
-            
-        # Addition bar
-        progress_add = etree.SubElement(svg, "rect")
-        progress_add.set("x", "250")
-        progress_add.set("y", "435")
-        progress_add.set("width", str(add_width))
-        progress_add.set("height", "20")
-        progress_add.set("class", "progress-fg-add")
-        
-        # Deletion bar
-        if add_width < 480:
-            progress_del = etree.SubElement(svg, "rect")
-            progress_del.set("x", str(250 + add_width))
-            progress_del.set("y", "435")
-            progress_del.set("width", str(480 - add_width))
-            progress_del.set("height", "20")
-            progress_del.set("class", "progress-fg-del")
-        
-        # Legend for additions and deletions
-        add_circle = etree.SubElement(svg, "circle")
-        add_circle.set("cx", "270")
-        add_circle.set("cy", "470")
-        add_circle.set("r", "5")
-        add_circle.set("class", "progress-fg-add")
-        
-        add_label = etree.SubElement(svg, "text")
-        add_label.set("x", "280")
-        add_label.set("y", "474")
-        add_label.set("class", "legend-label")
-        add_label.text = f"Additions: {stats['loc_add']}"
-        
-        del_circle = etree.SubElement(svg, "circle")
-        del_circle.set("cx", "400")
-        del_circle.set("cy", "470")
-        del_circle.set("r", "5")
-        del_circle.set("class", "progress-fg-del")
-        
-        del_label = etree.SubElement(svg, "text")
-        del_label.set("x", "410")
-        del_label.set("y", "474")
-        del_label.set("class", "legend-label")
-        del_label.text = f"Deletions: {stats['loc_del']}"
-        
-        # Footer
-        footer = etree.SubElement(svg, "text")
-        footer.set("x", "400")
-        footer.set("y", "490")
-        footer.set("text-anchor", "middle")
-        footer.set("class", "legend-label")
-        footer.text = f"Generated on {datetime.datetime.now().strftime('%Y-%m-%d')}"
-        
+            ascii_art_lines = [
+                "   .--.",
+                "  |o_o |",
+                "  |:_/ |",
+                "  //   \\ \\",
+                " (|     | )",
+                "'/\\---/\\`",
+                "  )=   =(",
+            ]
+
+        # Add ASCII Art (left side, starting at x=50)
+        for i, line in enumerate(ascii_art_lines):
+            text = etree.SubElement(svg, "text")
+            text.set("x", "50")
+            text.set("y", str(50 + i * 15))
+            text.set("class", "ascii")
+            text.text = line  # This should now work with cleaned strings
+
+        # User Information (right side, starting at x=500)
+        y_offset = 50
+        text_x = 500
+
+        # Username
+        username_text = etree.SubElement(svg, "text")
+        username_text.set("x", str(text_x))
+        username_text.set("y", str(y_offset))
+        username_text.set("class", "title")
+        username_text.text = f"{self.user_name} -"
+
+        # OS/Uptime
+        y_offset += 20
+        os_text = etree.SubElement(svg, "text")
+        os_text.set("x", str(text_x))
+        os_text.set("y", str(y_offset))
+        os_text.set("class", "text")
+        os_text.text = "OS: Windows 19, Android 14, Linux"
+
+        y_offset += 20
+        uptime_text = etree.SubElement(svg, "text")
+        uptime_text.set("x", str(text_x))
+        uptime_text.set("y", str(y_offset))
+        uptime_text.set("class", "text")
+        uptime_text.text = f"Uptime: {stats['age']}"
+
+        # Host/Kernel
+        y_offset += 20
+        host_text = etree.SubElement(svg, "text")
+        host_text.set("x", str(text_x))
+        host_text.set("y", str(y_offset))
+        host_text.set("class", "text")
+        host_text.text = "Host: TTM Technologies, Inc."
+
+        y_offset += 20
+        kernel_text = etree.SubElement(svg, "text")
+        kernel_text.set("x", str(text_x))
+        kernel_text.set("y", str(y_offset))
+        kernel_text.set("class", "text")
+        kernel_text.text = "Kernel: CAM (Computer Aided Manufacturing) Operator"
+
+        # Languages
+        y_offset += 20
+        lang_prog_text = etree.SubElement(svg, "text")
+        lang_prog_text.set("x", str(text_x))
+        lang_prog_text.set("y", str(y_offset))
+        lang_prog_text.set("class", "text")
+        lang_prog_text.text = "Languages, Programming: Java, Python, JavaScript, C++"
+
+        y_offset += 20
+        lang_comp_text = etree.SubElement(svg, "text")
+        lang_comp_text.set("x", str(text_x))
+        lang_comp_text.set("y", str(y_offset))
+        lang_comp_text.set("class", "text")
+        lang_comp_text.text = "Languages, Computer: HTML, CSS, JSON, LaTeX, YAML"
+
+        y_offset += 20
+        lang_real_text = etree.SubElement(svg, "text")
+        lang_real_text.set("x", str(text_x))
+        lang_real_text.set("y", str(y_offset))
+        lang_real_text.set("class", "text")
+        lang_real_text.text = "Languages, Real: English, Spanish"
+
+        # Hobbies
+        y_offset += 20
+        hobbies_soft_text = etree.SubElement(svg, "text")
+        hobbies_soft_text.set("x", str(text_x))
+        hobbies_soft_text.set("y", str(y_offset))
+        hobbies_soft_text.set("class", "text")
+        hobbies_soft_text.text = "Hobbies, Software: Minecraft Modding, iOS Jailbreaking"
+
+        y_offset += 20
+        hobbies_hard_text = etree.SubElement(svg, "text")
+        hobbies_hard_text.set("x", str(text_x))
+        hobbies_hard_text.set("y", str(y_offset))
+        hobbies_hard_text.set("class", "text")
+        hobbies_hard_text.text = "Hobbies, Hardware: Overclocking, Undervolting"
+
+        # Contact
+        y_offset += 20
+        contact_personal_text = etree.SubElement(svg, "text")
+        contact_personal_text.set("x", str(text_x))
+        contact_personal_text.set("y", str(y_offset))
+        contact_personal_text.set("class", "text")
+        contact_personal_text.text = "Contact, Personal: agrantnmac@gmail.com"
+
+        y_offset += 20
+        contact_work_text = etree.SubElement(svg, "text")
+        contact_work_text.set("x", str(text_x))
+        contact_work_text.set("y", str(y_offset))
+        contact_work_text.set("class", "text")
+        contact_work_text.text = "Email, Work: andrew.grant@softwar.com"
+
+        y_offset += 20
+        linkedin_text = etree.SubElement(svg, "text")
+        linkedin_text.set("x", str(text_x))
+        linkedin_text.set("y", str(y_offset))
+        linkedin_text.set("class", "text")
+        linkedin_text.text = "LinkedIn: Andrew.Grant@linkedin.com"
+
+        y_offset += 20
+        discord_text = etree.SubElement(svg, "text")
+        discord_text.set("x", str(text_x))
+        discord_text.set("y", str(y_offset))
+        discord_text.set("class", "text")
+        discord_text.text = "Discord: andrew_grant"
+
+        # GitHub Stats
+        y_offset += 40
+        repos_text = etree.SubElement(svg, "text")
+        repos_text.set("x", str(text_x))
+        repos_text.set("y", str(y_offset))
+        repos_text.set("class", "text")
+        repos_text.text = f"Repos: {stats['repos']} (Contributed: {stats['contrib']})"
+
+        y_offset += 20
+        commits_text = etree.SubElement(svg, "text")
+        commits_text.set("x", str(text_x))
+        commits_text.set("y", str(y_offset))
+        commits_text.set("class", "text")
+        commits_text.text = f"Commits: {stats['commits']} | Stars: {stats['stars']} | Followers: {stats['followers']}"
+
+        y_offset += 20
+        loc_text = etree.SubElement(svg, "text")
+        loc_text.set("x", str(text_x))
+        loc_text.set("y", str(y_offset))
+        loc_text.set("class", "text")
+        loc_text.text = f"Lines of Code on GitHub: {stats['loc']} ({stats['loc_add']}+, {stats['loc_del']}-)"
+
         # Write SVG to file
         tree = etree.ElementTree(svg)
         tree.write(filename, encoding='utf-8', xml_declaration=True, pretty_print=True)
-        
-    def _create_stat_card(self, svg, x, y, width, height, title, value):
-        """Helper method to create a stat card in the SVG"""
-        card = etree.SubElement(svg, "rect")
-        card.set("x", str(x))
-        card.set("y", str(y))
-        card.set("width", str(width))
-        card.set("height", str(height))
-        card.set("class", "card stat-card")
-        
-        title_elem = etree.SubElement(svg, "text")
-        title_elem.set("x", str(x + 20))
-        title_elem.set("y", str(y + 30))
-        title_elem.set("class", "stat-title")
-        title_elem.text = title
-        
-        value_elem = etree.SubElement(svg, "text")
-        value_elem.set("x", str(x + 20))
-        value_elem.set("y", str(y + 65))
-        value_elem.set("class", "stat-value")
-        value_elem.text = str(value)
-        
-        return card
 
     def perf_counter(self, func, *args):
         """Measure function execution time"""
@@ -655,7 +680,6 @@ class GitHubStatsGenerator:
         else:
             self.formatter('LOC (no cache)', loc_time)
 
-        # Get other stats
         commit_data, commit_time = self.perf_counter(self.commit_counter, 7)
         star_data, star_time = self.perf_counter(
             self.graph_repos_stars, 'stars', ['OWNER'])
