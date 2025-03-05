@@ -33,20 +33,19 @@
   <text x="50" y="350" class="ascii">QQQQQQQQQQQQQQQQQQQQQQQQ0RRRRR00QQQQQQQQQQQQQQQQQQ</text>
   <text x="50" y="365" class="ascii">QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ</text>
   <text x="500" y="50" class="title">ntananh -</text>
-  <text x="500" y="70" class="text">OS: Windows 19, Android 14, Linux</text>
+  <text x="500" y="70" class="text">OS: Linux, Mac</text>
   <text x="500" y="90" class="text">Uptime: 4 years, 6 months, 15 days</text>
-  <text x="500" y="110" class="text">Host: TTM Technologies, Inc.</text>
-  <text x="500" y="130" class="text">Kernel: CAM (Computer Aided Manufacturing) Operator</text>
+  <text x="500" y="110" class="text">Host: Body</text>
+  <text x="500" y="130" class="text">Kernel: Brain</text>
   <text x="500" y="150" class="text">Languages, Programming: Java, Python, JavaScript, C++</text>
   <text x="500" y="170" class="text">Languages, Computer: HTML, CSS, JSON, LaTeX, YAML</text>
-  <text x="500" y="190" class="text">Languages, Real: English, Spanish</text>
-  <text x="500" y="210" class="text">Hobbies, Software: Minecraft Modding, iOS Jailbreaking</text>
-  <text x="500" y="230" class="text">Hobbies, Hardware: Overclocking, Undervolting</text>
-  <text x="500" y="250" class="text">Contact, Personal: agrantnmac@gmail.com</text>
-  <text x="500" y="270" class="text">Email, Work: andrew.grant@softwar.com</text>
-  <text x="500" y="290" class="text">LinkedIn: Andrew.Grant@linkedin.com</text>
-  <text x="500" y="310" class="text">Discord: andrew_grant</text>
-  <text x="500" y="350" class="text">Repos: 36 (Contributed: 36)</text>
-  <text x="500" y="370" class="text">Commits: 484 | Stars: 0 | Followers: 15</text>
-  <text x="500" y="390" class="text">Lines of Code on GitHub: 665,884 (691753+, 25869-)</text>
+  <text x="500" y="190" class="text">Languages, Real: English, Vietnamese</text>
+  <text x="500" y="210" class="text">Hobbies, Software: Open Source</text>
+  <text x="500" y="230" class="text">Hobbies, Hardware: Thingking..</text>
+  <text x="500" y="250" class="text">Contact, Personal: tananh691@gmail.com</text>
+  <text x="500" y="270" class="text">LinkedIn: ntananh@linkedin.com</text>
+  <text x="500" y="290" class="text">Discord: _unhomie_</text>
+  <text x="500" y="330" class="text">Repos: 36 (Contributed: 36)</text>
+  <text x="500" y="350" class="text">Commits: 484 | Stars: 0 | Followers: 15</text>
+  <text x="500" y="370" class="text">Lines of Code on GitHub: 665,884 (691753+, 25869-)</text>
 </svg>
