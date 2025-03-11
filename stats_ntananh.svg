@@ -28,7 +28,7 @@
   <text x="50" y="114" class="ascii" fill="#7DCFFF">QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ</text>
   <text x="300" y="114" class="info">Kernel: 24.3.0</text>
   <text x="50" y="132" class="ascii" fill="#BD93F9">QQQQQQQQQQQQQQQQQQQQN@AGEggghEXEg@0QQQQQQQQQQQQQQQ</text>
-  <text x="300" y="132" class="info">Uptime: $4 years, 6 months, 19 days</text>
+  <text x="300" y="132" class="info">Uptime: $4 years, 6 months, 20 days</text>
   <text x="50" y="150" class="ascii" fill="#FF79C6">QQQQQQQQQQQQQQQQQQDPggdmpppmqqq5nzupYWQQQQQQQQQQQQ</text>
   <text x="300" y="150" class="info">Packages: 155 (brew)</text>
   <text x="50" y="168" class="ascii" fill="#FFD700">QQQQQQQQQQQQQQQQRXdbVJufqqmmmSm2fCj1[7mDQQQQQQQQQQ</text>
@@ -42,11 +42,11 @@
   <text x="50" y="240" class="ascii" fill="#9ECE6A">QQQQQQQQQQQQMKbhCTnJ2yfwwC###TTJwfwj1?*rLQQQQQQQQQ</text>
   <text x="300" y="240" class="info">Repos: 36 (Contributed: 36)</text>
   <text x="50" y="258" class="ascii" fill="#7DCFFF">QQQQQQQQQQQQQQQMZA6#5E5TTwwJwCwj[1ouLt!*}S0QQQQQQQ</text>
-  <text x="300" y="258" class="info">Commits: 350 | Stars: 0</text>
+  <text x="300" y="258" class="info">Commits: 243 | Stars: 0</text>
   <text x="50" y="276" class="ascii" fill="#BD93F9">QQQQQQQQQQQQQQQXDRB@&amp;DAdEZu#66q7%!zf6er{{rfMQQQQQQ</text>
   <text x="300" y="276" class="info">Followers: 15 | Following: 49</text>
   <text x="50" y="294" class="ascii" fill="#FF79C6">QQQQQQQQQQQQQQQhD0HgDNRNBB@8AbEm56CFgIcrrr}gQQQQQQ</text>
-  <text x="300" y="294" class="info">Lines of Code: 660,819  (+666619, -5800)</text>
+  <text x="300" y="294" class="info">Lines of Code: 649,277  (+653106, -3829)</text>
   <text x="50" y="312" class="ascii" fill="#FFD700">QQQQQQQQQQQQQQQUkBKZPDRMRQQMUkYGEqhyCdEgSgGBQQQQQQ</text>
   <text x="300" y="312" class="info"></text>
   <text x="50" y="330" class="ascii" fill="#50FA7B">QQQQQQQQQQQQQQQ0X8AYDHNMRRB&amp;bGGGkpCYQQQQQQQQQQQQQQ</text>
