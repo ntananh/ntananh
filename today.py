@@ -652,7 +652,8 @@ class GitHubStatsGenerator:
         # Calculate age
         birthday = datetime.datetime.strptime(user_info.get(
             'createdAt', '2020-01-01'), '%Y-%m-%dT%H:%M:%SZ')
-        age_data, age_time = self.perf_counter(self.daily_readme, birthday)
+
+        age_data, age_time = self.perf_counter(self.daily_readme, datetime.datetime(2001, 6, 9))
         self.formatter('age calculation', age_time)
 
         # Get LOC stats
