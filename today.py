@@ -1,3 +1,4 @@
+import re
 import datetime
 from dateutil import relativedelta
 import requests
@@ -423,6 +424,60 @@ class GitHubStatsGenerator:
             return f"{'{:,}'.format(func_return): <{whitespace}}"
         return func_return
 
+    def generate_readme(self, template_readme: str, stats: dict) -> int:
+        try:
+            with open(template_readme, 'r') as f:
+                template = f.read()
+
+            # Extract current placeholder lengths to maintain alignment
+            repo_placeholder_len = len("{{repos}}")
+            stars_placeholder_len = len("{{stars}}")
+            commits_placeholder_len = len("{{commits}}")
+            followers_placeholder_len = len("{{followers}}")
+            loc_placeholder_len = len("{{loc}}")
+            loc_added_placeholder_len = len("{{loc_added}}")
+            loc_removed_placeholder_len = len("{{loc_removed}}")
+
+            # Format numbers with commas
+            repos_formatted = f"{int(stats['repos']):,}"
+            stars_formatted = f"{int(stats['stars']):,}"
+            commits_formatted = f"{int(stats['commits']):,}"
+            followers_formatted = f"{int(stats['followers']):,}"
+            loc_formatted = f"{int(stats['loc'].replace(',', '')):,}"
+
+            # Special handling for loc_added and loc_removed with periods
+            loc_added_num = f"{int(stats['loc_added'].replace(',', '')):,}"
+            loc_removed_num = f"{int(stats['loc_removed'].replace(',', '')):,}"
+
+            # For loc_added and loc_removed, we include ++ and -- directly
+            loc_added_formatted = f"{loc_added_num}++"
+            loc_removed_formatted = f"{loc_removed_num}--"
+
+            # Create replacement dictionary with proper spacing adjustment
+            formatted = {
+                'uptime': stats.get('uptime', ''),
+                'repos': repos_formatted.ljust(repo_placeholder_len),
+                'stars': stars_formatted.ljust(stars_placeholder_len).strip(),
+                'commits': commits_formatted.ljust(commits_placeholder_len),
+                'followers': followers_formatted.ljust(followers_placeholder_len).strip(),
+                'loc': loc_formatted.ljust(loc_placeholder_len),
+                'loc_added': loc_added_formatted.ljust(loc_added_placeholder_len),
+                'loc_removed': loc_removed_formatted.ljust(loc_removed_placeholder_len),
+                'quote': stats.get('quote', '')
+            }
+
+            for key, value in formatted.items():
+                template = template.replace(f"{{{{{key}}}}}", value)
+
+            template = re.sub(r'(\+\+)\s+(\|)', r'\1\2', template)
+            template = re.sub(r'(--)\s+(\))', r'\1 \2', template)
+
+            with open("README.md", 'w') as f:
+                f.write(template)
+            return 0
+        except FileNotFoundError:
+            return -1
+
     def run(self):
         """Main method to run the stats generator"""
         print('Calculation times:')
@@ -465,7 +520,7 @@ class GitHubStatsGenerator:
 
         # Create stats dictionary
         stats = {
-            'age': age_data,
+            'uptime': age_data, #age
             'commits': f"{'{:,}'.format(commit_data)}",
             'stars': f"{'{:,}'.format(star_data)}",
             'repos': f"{'{:,}'.format(repo_data)}",
@@ -474,9 +529,13 @@ class GitHubStatsGenerator:
             'following': f"{'{:,}'.format(follower_info['following'])}",
             # Net LOC (additions - deletions)
             'loc': f"{'{:,}'.format(total_loc[2])}",
-            'loc_add': total_loc[0],                  # Total additions
-            'loc_del': total_loc[1]                   # Total deletions
+            'loc_added': f"{'{:,}'.format(total_loc[0])}",                  # Total additions
+            'loc_removed': f"{'{:,}'.format(total_loc[1])}"                 # Total deletions
         }
+
+        # TODO: get the template and build new data
+        self.perf_counter(self.generate_readme, "README.template.md", stats)
+
 
         # Format and print remaining stats
         self.formatter('commit counter', commit_time)
@@ -487,19 +546,19 @@ class GitHubStatsGenerator:
 
         print(f"\nTotal API queries: {sum(self.query_count.values())}")
         for key, value in self.query_count.items():
-            print(f"{key}: {value}")
+            print(f"\t{key}: {value}")
 
         print('\nGitHub Stats Summary:')
         print(f"Username: {self.user_name}")
-        print(f"GitHub Age: {stats['age']}")
+        print(f"Age: {stats['uptime']}")
         print(f"Repositories: {stats['repos']}")
         print(f"Stars: {stats['stars']}")
         print(f"Commits: {stats['commits']}")
         print(f"Followers: {stats['followers']}")
         print(f"Following: {stats['following']}")
         print(f"Lines of Code (net): {stats['loc']}")
-        print(f"Lines Added: {'{:,}'.format(stats['loc_add'])}")
-        print(f"Lines Deleted: {'{:,}'.format(stats['loc_del'])}")
+        print(f"Lines Added: {stats['loc_added']}")
+        print(f"Lines Deleted: {stats['loc_removed']}")
 
         return stats
 
