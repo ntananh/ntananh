@@ -463,7 +463,7 @@ class GitHubStatsGenerator:
                 'loc': loc_formatted.ljust(loc_placeholder_len),
                 'loc_added': loc_added_formatted.ljust(loc_added_placeholder_len),
                 'loc_removed': loc_removed_formatted.ljust(loc_removed_placeholder_len),
-                'quote': stats.get('quote', '')
+                'quote': stats.get('quote', 'No Pain No Gain')
             }
 
             for key, value in formatted.items():
