@@ -5,6 +5,10 @@ import os
 import time
 import hashlib
 
+# Fine-grained personal access token with All Repositories access:
+# Account permissions: read:Followers, read:Starring, read:Watching
+# Repository permissions: read:Commit statuses, read:Contents, read:Issues, read:Metadata, read:Pull Requests
+# Issues and pull requests permissions not needed at the moment, but may be used in the future
 class GitHubStatsGenerator:
     """
     A class to generate GitHub stats for a user, including repos, stars, commits, and LOC.
@@ -159,12 +163,13 @@ class GitHubStatsGenerator:
 
         if request.status_code == 200:
             if request.json()['data']['repository']['defaultBranchRef'] is not None:
-                return self.loc_counter_one_repo(
+                loc_connter_in_one_repo = self.loc_counter_one_repo(
                     owner, repo_name, data, cache_comment,
                     request.json()[
                         'data']['repository']['defaultBranchRef']['target']['history'],
                     addition_total, deletion_total, my_commits
                 )
+                return loc_connter_in_one_repo
             else:
                 return 0, 0, 0
 
@@ -278,10 +283,8 @@ class GitHubStatsGenerator:
             if repo_hash == hashlib.sha256(edges[index]['node']['nameWithOwner'].encode('utf-8')).hexdigest():
                 try:
                     if int(commit_count) != edges[index]['node']['defaultBranchRef']['target']['history']['totalCount']:
-                        owner, repo_name = edges[index]['node']['nameWithOwner'].split(
-                            '/')
-                        loc = self.recursive_loc(
-                            owner, repo_name, data, cache_comment)
+                        owner, repo_name = edges[index]['node']['nameWithOwner'].split('/')
+                        loc = self.recursive_loc(owner, repo_name, data, cache_comment)
                         data[index] = f"{repo_hash} {edges[index]['node']['defaultBranchRef']['target']['history']['totalCount']} {loc[2]} {loc[0]} {loc[1]}\n"
                 except TypeError:
                     data[index] = f"{repo_hash} 0 0 0 0\n"
@@ -379,7 +382,7 @@ class GitHubStatsGenerator:
         variables = {'login': username}
         request = self.simple_request('user_getter', query, variables)
         user_data = request.json()['data']['user']
-        return {'id': user_data['id']}, user_data
+        return {'id': user_data['id']}
 
     def follower_getter(self, username):
         """Get follower count for user"""
@@ -426,7 +429,7 @@ class GitHubStatsGenerator:
 
         # Initialize and get user data
         user_data, user_time = self.perf_counter(self.initialize)
-        OWNER_ID, _user_info = user_data
+        OWNER_ID = user_data
         self.formatter('account data', user_time)
 
         age_data, age_time = self.perf_counter(self.daily_readme, datetime.datetime(2001, 6, 9))
