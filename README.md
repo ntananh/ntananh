@@ -1,6 +1,22 @@
-<a href="https://github.com/ntananh/ntananh">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/ntananh/ntananh/main/dark_mode.svg">
-    <img alt="Tan Anh's GitHub Profile README" src="https://raw.githubusercontent.com/ntananh/ntananh/main/light_mode.svg">
-  </picture>
-</a>
+```
+                 **##**#                  ntananh@unfinitas.fi
+              *+=++++++++**#*             --------------------
+            *=-==++++++==++*##*=          User     : Tony
+          #+-=**+*+++++==+++**##*+        Host     : Body
+         #*+++**+======+++*+***###=       Kernel   : Brain
+     *#+=--=+++++++++***====****###=      Origin   : Vietnam
+   ********++++++++***+++***++=*###*      Uptime   : {{uptime}}
+   +*+*######*+++*****++++++*#***##*      
+      +#****+++++*##++++**+++*#####*      --------------------
+         *=+++++++++++****+++**####*      Email    : tananh691@gmail.com
+        +---=++=+*+*#*+++*####**####*     Discord  : @_unhomie_
+        *::::---=-:*#++++*##*+=*#####+    LinkedIn : @ntananh
+        *::-=::::------=+**=*+=+######*   
+        *:::+==:::::::---==*++*###***#    --------------------
+        #=:---:::::::---=====*#   =       Repos        : {{repo}}          | Stars     : {{star}}
+         *:-=---::::--====-+##            Commits      : {{commit}}        | Followers : {{follower}}
+          *:--::::--==+=--:#              Line of Code : {{line_of_code}}  [ {{loc_added}}++, {{loc_removed}}-- ]
+          *+----=*#*==---:=*              
+                +#+=-----:*#              --------------------
+                #=----+-----              > "{{quote}}"
+```
