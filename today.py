@@ -487,7 +487,7 @@ class GitHubStatsGenerator:
         OWNER_ID = user_data
         self.formatter('account data', user_time)
 
-        age_data, age_time = self.perf_counter(self.daily_readme, datetime.datetime(2001, 6, 9))
+        age_data, age_time = self.perf_counter(self.daily_readme, datetime.datetime(2001, 9, 6))
         self.formatter('age calculation', age_time)
 
         # Get LOC stats
