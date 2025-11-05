@@ -5,26 +5,40 @@ import requests
 import os
 import time
 import hashlib
+import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# Fine-grained personal access token with All Repositories access:
-# Account permissions: read:Followers, read:Starring, read:Watching
-# Repository permissions: read:Commit statuses, read:Contents, read:Issues, read:Metadata, read:Pull Requests
-# Issues and pull requests permissions not needed at the moment, but may be used in the future
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
 class GitHubStatsGenerator:
     """
     A class to generate GitHub stats for a user, including repos, stars, commits, and LOC.
     """
 
     def __init__(self):
-        self.access_token = os.environ.get(
-            'ACCESS_TOKEN', "")
+        self.access_token = os.environ.get('ACCESS_TOKEN')
         self.user_name = os.environ.get('USER_NAME', "ntananh")
+        
+        if not self.access_token:
+            raise ValueError("ACCESS_TOKEN environment variable required")
+        if not self.user_name:
+            raise ValueError("USER_NAME environment variable required")
+            
         self.headers = {'authorization': 'token ' + self.access_token}
-        self.owner_id = None  # Will be populated in initialize()
-        self.query_count = {'user_getter': 0, 'follower_getter': 0, 'graph_repos_stars': 0,
-                            'recursive_loc': 0, 'graph_commits': 0, 'loc_query': 0}
-
-        # Create cache directory if it doesn't exist
+        self.owner_id = None
+        self.verified_emails = []
+        self.query_count = {
+            'user_getter': 0,
+            'follower_getter': 0,
+            'graph_repos_stars': 0,
+            'recursive_loc': 0,
+            'graph_commits': 0,
+            'loc_query': 0,
+            'email_query': 0
+        }
+        
         if not os.path.exists('cache'):
             os.makedirs('cache')
 
@@ -32,13 +46,32 @@ class GitHubStatsGenerator:
         """Initialize by fetching user data and setting owner_id"""
         user_data, _ = self.perf_counter(self.user_getter, self.user_name)
         self.owner_id = user_data
+        self.verified_emails = self.get_verified_emails()
+        logger.info(f"Initialized for user {self.user_name} with {len(self.verified_emails)} verified emails")
         return user_data
 
+    def get_verified_emails(self):
+        """Get all verified emails for the authenticated user via REST API"""
+        self.query_count_increment('email_query')
+        try:
+            r = requests.get(
+                "https://api.github.com/user/emails",
+                headers=self.headers,
+                timeout=30
+            )
+            if r.status_code == 200:
+                emails = [e['email'] for e in r.json() if e.get('verified')]
+                logger.info(f"Found {len(emails)} verified emails")
+                return emails
+            else:
+                logger.warning(f"Email query failed: {r.status_code}")
+                return []
+        except Exception as e:
+            logger.warning(f"Could not fetch verified emails: {e}")
+            return []
+
     def daily_readme(self, birthday):
-        """
-        Returns the length of time since given birthday
-        e.g. 'XX years, XX months, XX days'
-        """
+        """Returns the length of time since given birthday"""
         diff = relativedelta.relativedelta(datetime.datetime.today(), birthday)
         return '{} {}, {} {}, {} {}{}'.format(
             diff.years, 'year' + self.format_plural(diff.years),
@@ -50,15 +83,28 @@ class GitHubStatsGenerator:
         """Returns 's' if unit is not 1, otherwise empty string"""
         return 's' if unit != 1 else ''
 
-    def simple_request(self, func_name, query, variables):
-        """Make a GraphQL request to GitHub API"""
-        request = requests.post('https://api.github.com/graphql',
-                                json={'query': query, 'variables': variables},
-                                headers=self.headers)
-        if request.status_code == 200:
-            return request
-        raise Exception(func_name, ' has failed with a', request.status_code,
-                        request.text, self.query_count)
+    def simple_request(self, func_name, query, variables, retry_count=0, max_retries=3):
+        """Make a GraphQL request to GitHub API with retry logic"""
+        try:
+            request = requests.post(
+                'https://api.github.com/graphql',
+                json={'query': query, 'variables': variables},
+                headers=self.headers,
+                timeout=30
+            )
+            
+            if request.status_code == 200:
+                return request
+            elif request.status_code == 403 and retry_count < max_retries:
+                logger.warning(f"Rate limit hit, waiting 60s before retry {retry_count + 1}/{max_retries}")
+                time.sleep(60)
+                return self.simple_request(func_name, query, variables, retry_count + 1, max_retries)
+            else:
+                raise Exception(f'{func_name} failed with status {request.status_code}: {request.text}')
+                
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request failed for {func_name}: {e}")
+            raise
 
     def query_count_increment(self, func_id):
         """Track number of API calls by function"""
@@ -77,8 +123,8 @@ class GitHubStatsGenerator:
                 }
             }
         }'''
-        variables = {'start_date': start_date,
-                     'end_date': end_date, 'login': self.user_name}
+        
+        variables = {'start_date': start_date, 'end_date': end_date, 'login': self.user_name}
         request = self.simple_request('graph_commits', query, variables)
         return int(request.json()['data']['user']['contributionsCollection']['contributionCalendar']['totalContributions'])
 
@@ -88,7 +134,7 @@ class GitHubStatsGenerator:
         query = '''
         query ($owner_affiliation: [RepositoryAffiliation], $login: String!, $cursor: String) {
             user(login: $login) {
-                repositories(first: 100, after: $cursor, ownerAffiliations: $owner_affiliation) {
+                repositories(first: 100, after: $cursor, ownerAffiliations: $owner_affiliation, isFork: false) {
                     totalCount
                     edges {
                         node {
@@ -107,9 +153,10 @@ class GitHubStatsGenerator:
                 }
             }
         }'''
-        variables = {'owner_affiliation': owner_affiliation,
-                     'login': self.user_name, 'cursor': cursor}
+        
+        variables = {'owner_affiliation': owner_affiliation, 'login': self.user_name, 'cursor': cursor}
         request = self.simple_request('graph_repos_stars', query, variables)
+        
         if count_type == 'repos':
             return request.json()['data']['user']['repositories']['totalCount']
         elif count_type == 'stars':
@@ -137,14 +184,15 @@ class GitHubStatsGenerator:
                                     node {
                                         ... on Commit {
                                             committedDate
-                                        }
-                                        author {
-                                            user {
-                                                id
+                                            additions
+                                            deletions
+                                            author {
+                                                email
+                                                user {
+                                                    id
+                                                }
                                             }
                                         }
-                                        deletions
-                                        additions
                                     }
                                 }
                                 pageInfo {
@@ -157,38 +205,56 @@ class GitHubStatsGenerator:
                 }
             }
         }'''
+        
         variables = {'repo_name': repo_name, 'owner': owner, 'cursor': cursor}
-        request = requests.post('https://api.github.com/graphql',
-                                json={'query': query, 'variables': variables},
-                                headers=self.headers)
-
-        if request.status_code == 200:
-            if request.json()['data']['repository']['defaultBranchRef'] is not None:
-                loc_connter_in_one_repo = self.loc_counter_one_repo(
-                    owner, repo_name, data, cache_comment,
-                    request.json()[
-                        'data']['repository']['defaultBranchRef']['target']['history'],
+        
+        try:
+            request = requests.post(
+                'https://api.github.com/graphql',
+                json={'query': query, 'variables': variables},
+                headers=self.headers,
+                timeout=30
+            )
+            
+            if request.status_code == 200:
+                repo_data = request.json()['data']['repository']
+                
+                if not repo_data or not repo_data['defaultBranchRef']:
+                    logger.debug(f"No default branch for {owner}/{repo_name}")
+                    return 0, 0, 0
+                    
+                history = repo_data['defaultBranchRef']['target']['history']
+                loc_result = self.loc_counter_one_repo(
+                    owner, repo_name, data, cache_comment, history,
                     addition_total, deletion_total, my_commits
                 )
-                return loc_connter_in_one_repo
+                return loc_result
+                
+            elif request.status_code == 403:
+                logger.error('Rate limit exceeded!')
+                self.force_close_file(data, cache_comment)
+                raise Exception('Too many requests in a short amount of time!')
             else:
+                logger.error(f"Failed to fetch {owner}/{repo_name}: {request.status_code}")
                 return 0, 0, 0
-
-        self.force_close_file(data, cache_comment)
-        if request.status_code == 403:
-            raise Exception(
-                'Too many requests in a short amount of time!\nYou\'ve hit the non-documented anti-abuse limit!')
-        raise Exception('recursive_loc() has failed with a',
-                        request.status_code, request.text, self.query_count)
+                
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request error for {owner}/{repo_name}: {e}")
+            return 0, 0, 0
 
     def loc_counter_one_repo(self, owner, repo_name, data, cache_comment, history, addition_total, deletion_total, my_commits):
-        """
-        Calculate lines of code statistics for a single repository
-        """
+        """Calculate lines of code statistics for a single repository"""
         for node in history['edges']:
-            # Check if user exists before checking ID
-            if (node['node']['author']['user'] is not None and
-                    node['node']['author']['user']['id'] == self.owner_id['id']):
+            author = node['node']['author']
+            
+            # Check both user ID and verified email
+            is_mine = False
+            if author['user'] and author['user']['id'] == self.owner_id['id']:
+                is_mine = True
+            elif author['email'] and author['email'] in self.verified_emails:
+                is_mine = True
+                
+            if is_mine:
                 my_commits += 1
                 addition_total += node['node']['additions']
                 deletion_total += node['node']['deletions']
@@ -206,21 +272,21 @@ class GitHubStatsGenerator:
         """Query all repositories and calculate total lines of code"""
         if edges is None:
             edges = []
-
+            
         self.query_count_increment('loc_query')
         query = '''
         query ($owner_affiliation: [RepositoryAffiliation], $login: String!, $cursor: String) {
             user(login: $login) {
-                repositories(first: 60, after: $cursor, ownerAffiliations: $owner_affiliation) {
-                edges {
-                    node {
-                        ... on Repository {
-                            nameWithOwner
-                            defaultBranchRef {
-                                target {
-                                    ... on Commit {
-                                        history {
-                                            totalCount
+                repositories(first: 60, after: $cursor, ownerAffiliations: $owner_affiliation, isFork: false) {
+                    edges {
+                        node {
+                            ... on Repository {
+                                nameWithOwner
+                                defaultBranchRef {
+                                    target {
+                                        ... on Commit {
+                                            history {
+                                                totalCount
                                             }
                                         }
                                     }
@@ -235,60 +301,99 @@ class GitHubStatsGenerator:
                 }
             }
         }'''
-        variables = {'owner_affiliation': owner_affiliation,
-                     'login': self.user_name, 'cursor': cursor}
+        
+        variables = {'owner_affiliation': owner_affiliation, 'login': self.user_name, 'cursor': cursor}
         request = self.simple_request('loc_query', query, variables)
-
+        
         if request.json()['data']['user']['repositories']['pageInfo']['hasNextPage']:
             edges += request.json()['data']['user']['repositories']['edges']
             return self.loc_query(
                 owner_affiliation, comment_size, force_cache,
-                request.json()[
-                    'data']['user']['repositories']['pageInfo']['endCursor'],
+                request.json()['data']['user']['repositories']['pageInfo']['endCursor'],
                 edges
             )
         else:
             return self.cache_builder(
-                edges +
-                request.json()['data']['user']['repositories']['edges'],
+                edges + request.json()['data']['user']['repositories']['edges'],
                 comment_size, force_cache
             )
 
+    def process_repo_loc(self, edge, data, cache_comment):
+        """Process a single repository's LOC (for parallel execution)"""
+        try:
+            owner, repo_name = edge['node']['nameWithOwner'].split('/')
+            loc = self.recursive_loc(owner, repo_name, data, cache_comment)
+            expected_commits = edge['node']['defaultBranchRef']['target']['history']['totalCount']
+            repo_hash = hashlib.sha256(edge['node']['nameWithOwner'].encode('utf-8')).hexdigest()
+            return (repo_hash, expected_commits, loc)
+        except Exception as e:
+            logger.error(f"Error processing {edge['node']['nameWithOwner']}: {e}")
+            repo_hash = hashlib.sha256(edge['node']['nameWithOwner'].encode('utf-8')).hexdigest()
+            return (repo_hash, 0, (0, 0, 0))
+
     def cache_builder(self, edges, comment_size, force_cache, loc_add=0, loc_del=0):
-        """Build and manage cache of repository statistics"""
+        """Build and manage cache of repository statistics with parallel processing"""
         cached = True
         filename = f'cache/{hashlib.sha256(self.user_name.encode("utf-8")).hexdigest()}.txt'
-
+        
+        # Check cache age
+        if os.path.exists(filename):
+            cache_age = time.time() - os.path.getmtime(filename)
+            if cache_age > 86400:  # 24 hours
+                logger.info("Cache older than 24 hours, forcing refresh")
+                force_cache = True
+        
         try:
             with open(filename, 'r') as f:
                 data = f.readlines()
         except FileNotFoundError:
             data = []
             if comment_size > 0:
-                data = [
-                    'This line is a comment block. Write whatever you want here.\n'] * comment_size
+                data = ['This line is a comment block. Write whatever you want here.\n'] * comment_size
             with open(filename, 'w') as f:
                 f.writelines(data)
 
         if len(data) - comment_size != len(edges) or force_cache:
             cached = False
             self.flush_cache(edges, filename, comment_size)
-            with open(filename, 'r') as f:
-                data = f.readlines()
-
+            
+        with open(filename, 'r') as f:
+            data = f.readlines()
+            
         cache_comment = data[:comment_size]
         data = data[comment_size:]
 
+        # Collect repos that need updating
+        repos_to_update = []
         for index in range(len(edges)):
             repo_hash, commit_count, *__ = data[index].split()
+            
             if repo_hash == hashlib.sha256(edges[index]['node']['nameWithOwner'].encode('utf-8')).hexdigest():
                 try:
-                    if int(commit_count) != edges[index]['node']['defaultBranchRef']['target']['history']['totalCount']:
-                        owner, repo_name = edges[index]['node']['nameWithOwner'].split('/')
-                        loc = self.recursive_loc(owner, repo_name, data, cache_comment)
-                        data[index] = f"{repo_hash} {edges[index]['node']['defaultBranchRef']['target']['history']['totalCount']} {loc[2]} {loc[0]} {loc[1]}\n"
-                except TypeError:
+                    expected_commits = edges[index]['node']['defaultBranchRef']['target']['history']['totalCount']
+                    if int(commit_count) != expected_commits:
+                        repos_to_update.append((index, edges[index]))
+                except (TypeError, KeyError) as e:
+                    logger.warning(f"Error processing repo {edges[index]['node']['nameWithOwner']}: {e}")
                     data[index] = f"{repo_hash} 0 0 0 0\n"
+
+        # Process repos in parallel if there are any to update
+        if repos_to_update:
+            logger.info(f"Updating {len(repos_to_update)} repositories in parallel...")
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                futures = {
+                    executor.submit(self.process_repo_loc, edge, data, cache_comment): index
+                    for index, edge in repos_to_update
+                }
+                
+                for future in as_completed(futures):
+                    index = futures[future]
+                    try:
+                        repo_hash, expected_commits, loc = future.result()
+                        data[index] = f"{repo_hash} {expected_commits} {loc[2]} {loc[0]} {loc[1]}\n"
+                        logger.info(f"Updated repo at index {index}")
+                    except Exception as e:
+                        logger.error(f"Failed to update repo at index {index}: {e}")
 
         with open(filename, 'w') as f:
             f.writelines(cache_comment)
@@ -296,7 +401,7 @@ class GitHubStatsGenerator:
 
         for line in data:
             loc = line.split()
-            if len(loc) >= 5:  # Make sure we have enough elements
+            if len(loc) >= 5:
                 loc_add += int(loc[3])
                 loc_del += int(loc[4])
 
@@ -312,14 +417,12 @@ class GitHubStatsGenerator:
         except FileNotFoundError:
             data = []
             if comment_size > 0:
-                data = [
-                    'This line is a comment block. Write whatever you want here.\n'] * comment_size
+                data = ['This line is a comment block. Write whatever you want here.\n'] * comment_size
 
         with open(filename, 'w') as f:
             f.writelines(data)
             for node in edges:
-                f.write(
-                    f"{hashlib.sha256(node['node']['nameWithOwner'].encode('utf-8')).hexdigest()} 0 0 0 0\n")
+                f.write(f"{hashlib.sha256(node['node']['nameWithOwner'].encode('utf-8')).hexdigest()} 0 0 0 0\n")
 
     def force_close_file(self, data, cache_comment):
         """Ensure data is saved before potential crash"""
@@ -327,42 +430,49 @@ class GitHubStatsGenerator:
         with open(filename, 'w') as f:
             f.writelines(cache_comment)
             f.writelines(data)
-        print(
-            f'There was an error while writing to the cache file. The file, {filename} has had the partial data saved and closed.')
+        logger.error(f'Partial data saved to {filename}')
 
     def add_archive(self):
         """Add archived repository data"""
         try:
             with open('cache/repository_archive.txt', 'r') as f:
                 data = f.readlines()
+                
             old_data = data
-            data = data[7:len(data) - 3]  # remove the comment block
+            data = data[7:len(data) - 3]
+            
             added_loc, deleted_loc, added_commits = 0, 0, 0
             contributed_repos = len(data)
+            
             for line in data:
                 _, _, my_commits, *loc = line.split()
                 added_loc += int(loc[0])
                 deleted_loc += int(loc[1])
                 if my_commits.isdigit():
                     added_commits += int(my_commits)
+                    
             added_commits += int(old_data[-1].split()[4][:-1])
             return [added_loc, deleted_loc, added_loc - deleted_loc, added_commits, contributed_repos]
+            
         except FileNotFoundError:
-            print("Repository archive file not found. Creating empty archive data.")
+            logger.info("Repository archive file not found")
             return [0, 0, 0, 0, 0]
 
     def commit_counter(self, comment_size):
         """Count total commits from cache file"""
         total_commits = 0
         filename = f'cache/{hashlib.sha256(self.user_name.encode("utf-8")).hexdigest()}.txt'
+        
         try:
             with open(filename, 'r') as f:
                 data = f.readlines()
-            data = data[comment_size:]  # remove comment lines
+                data = data[comment_size:]
+                
             for line in data:
                 parts = line.split()
-                if len(parts) >= 3:  # Make sure we have enough elements
+                if len(parts) >= 3:
                     total_commits += int(parts[2])
+                    
             return total_commits
         except FileNotFoundError:
             return 0
@@ -380,6 +490,7 @@ class GitHubStatsGenerator:
                 bio
             }
         }'''
+        
         variables = {'login': username}
         request = self.simple_request('user_getter', query, variables)
         user_data = request.json()['data']['user']
@@ -399,6 +510,7 @@ class GitHubStatsGenerator:
                 }
             }
         }'''
+        
         variables = {'login': username}
         request = self.simple_request('follower_getter', query, variables)
         user_data = request.json()['data']['user']
@@ -415,21 +527,23 @@ class GitHubStatsGenerator:
 
     def formatter(self, query_type, difference, func_return=False, whitespace=0):
         """Format and print timing information"""
-        print('{:<23}'.format('   ' + query_type + ':'), sep='', end='')
+        print('{:<23}'.format(' ' + query_type + ':'), sep='', end='')
         if difference > 1:
             print('{:>12}'.format('%.4f' % difference + ' s '))
         else:
             print('{:>12}'.format('%.4f' % (difference * 1000) + ' ms'))
+            
         if whitespace:
             return f"{'{:,}'.format(func_return): <{whitespace}}"
         return func_return
 
     def generate_readme(self, template_readme: str, stats: dict) -> int:
+        """Generate README from template with stats"""
         try:
             with open(template_readme, 'r') as f:
                 template = f.read()
 
-            # Extract current placeholder lengths to maintain alignment
+            # Extract placeholder lengths
             repo_placeholder_len = len("{{repos}}")
             stars_placeholder_len = len("{{stars}}")
             commits_placeholder_len = len("{{commits}}")
@@ -444,16 +558,12 @@ class GitHubStatsGenerator:
             commits_formatted = f"{int(stats['commits']):,}"
             followers_formatted = f"{int(stats['followers']):,}"
             loc_formatted = f"{int(stats['loc'].replace(',', '')):,}"
-
-            # Special handling for loc_added and loc_removed with periods
             loc_added_num = f"{int(stats['loc_added'].replace(',', '')):,}"
             loc_removed_num = f"{int(stats['loc_removed'].replace(',', '')):,}"
 
-            # For loc_added and loc_removed, we include ++ and -- directly
             loc_added_formatted = f"{loc_added_num}++"
             loc_removed_formatted = f"{loc_removed_num}--"
 
-            # Create replacement dictionary with proper spacing adjustment
             formatted = {
                 'uptime': stats.get('uptime', ''),
                 'repos': repos_formatted.ljust(repo_placeholder_len),
@@ -474,15 +584,19 @@ class GitHubStatsGenerator:
 
             with open("README.md", 'w') as f:
                 f.write(template)
+
+            logger.info("README.md generated successfully")
             return 0
+            
         except FileNotFoundError:
+            logger.error(f"Template file {template_readme} not found")
             return -1
 
     def run(self):
         """Main method to run the stats generator"""
         print('Calculation times:')
 
-        # Initialize and get user data
+        # Initialize
         user_data, user_time = self.perf_counter(self.initialize)
         OWNER_ID = user_data
         self.formatter('account data', user_time)
@@ -493,25 +607,23 @@ class GitHubStatsGenerator:
         # Get LOC stats
         total_loc, loc_time = self.perf_counter(
             self.loc_query, ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'], 7)
+        
         if total_loc[-1]:
             self.formatter('LOC (cached)', loc_time)
         else:
             self.formatter('LOC (no cache)', loc_time)
 
         commit_data, commit_time = self.perf_counter(self.commit_counter, 7)
-        star_data, star_time = self.perf_counter(
-            self.graph_repos_stars, 'stars', ['OWNER'])
-        repo_data, repo_time = self.perf_counter(
-            self.graph_repos_stars, 'repos', ['OWNER'])
-        contrib_data, contrib_time = self.perf_counter(self.graph_repos_stars, 'repos', [
-            'OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'])
+        star_data, star_time = self.perf_counter(self.graph_repos_stars, 'stars', ['OWNER'])
+        repo_data, repo_time = self.perf_counter(self.graph_repos_stars, 'repos', ['OWNER'])
+        contrib_data, contrib_time = self.perf_counter(
+            self.graph_repos_stars, 'repos', ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'])
 
         # Get follower stats
-        follower_info, follower_time = self.perf_counter(
-            self.follower_getter, self.user_name)
+        follower_info, follower_time = self.perf_counter(self.follower_getter, self.user_name)
 
-        # Add archived repository data for specific user
-        if self.owner_id == {'id': OWNER_ID}:  # only calculate for specific user
+        # Add archived repository data - FIXED comparison
+        if self.owner_id['id'] == OWNER_ID['id']:
             archived_data = self.add_archive()
             for index in range(len(total_loc) - 1):
                 total_loc[index] += archived_data[index]
@@ -520,22 +632,20 @@ class GitHubStatsGenerator:
 
         # Create stats dictionary
         stats = {
-            'uptime': age_data, #age
+            'uptime': age_data,
             'commits': f"{'{:,}'.format(commit_data)}",
             'stars': f"{'{:,}'.format(star_data)}",
             'repos': f"{'{:,}'.format(repo_data)}",
             'contrib': f"{'{:,}'.format(contrib_data)}",
             'followers': f"{'{:,}'.format(follower_info['followers'])}",
             'following': f"{'{:,}'.format(follower_info['following'])}",
-            # Net LOC (additions - deletions)
             'loc': f"{'{:,}'.format(total_loc[2])}",
-            'loc_added': f"{'{:,}'.format(total_loc[0])}",                  # Total additions
-            'loc_removed': f"{'{:,}'.format(total_loc[1])}"                 # Total deletions
+            'loc_added': f"{'{:,}'.format(total_loc[0])}",
+            'loc_removed': f"{'{:,}'.format(total_loc[1])}"
         }
 
-        # TODO: get the template and build new data
+        # Generate README
         self.perf_counter(self.generate_readme, "README.template.md", stats)
-
 
         # Format and print remaining stats
         self.formatter('commit counter', commit_time)
