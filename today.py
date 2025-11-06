@@ -614,8 +614,10 @@ class GitHubStatsGenerator:
             self.formatter('LOC (no cache)', loc_time)
 
         commit_data, commit_time = self.perf_counter(self.commit_counter, 7)
-        star_data, star_time = self.perf_counter(self.graph_repos_stars, 'stars', ['OWNER'])
-        repo_data, repo_time = self.perf_counter(self.graph_repos_stars, 'repos', ['OWNER'])
+        star_data, star_time = self.perf_counter(
+            self.graph_repos_stars, 'stars', ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'])
+        repo_data, repo_time = self.perf_counter(
+            self.graph_repos_stars, 'repos', ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'])
         contrib_data, contrib_time = self.perf_counter(
             self.graph_repos_stars, 'repos', ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'])
 
