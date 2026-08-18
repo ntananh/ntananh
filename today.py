@@ -166,6 +166,11 @@ class GitHubStatsGenerator:
         """Count total stars in repositories"""
         total_stars = 0
         for node in data:
+            # GitHub's GraphQL API can return node: null for a repo edge that
+            # became inaccessible (deleted, transferred, visibility revoked)
+            # between when the connection was built and when it was read.
+            if node['node'] is None:
+                continue
             total_stars += node['node']['stargazers']['totalCount']
         return total_stars
 
