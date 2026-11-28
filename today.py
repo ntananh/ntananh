@@ -160,7 +160,15 @@ class GitHubStatsGenerator:
         if count_type == 'repos':
             return request.json()['data']['user']['repositories']['totalCount']
         elif count_type == 'stars':
-            return self.stars_counter(request.json()['data']['user']['repositories']['edges'])
+            total_stars = 0
+            while True:
+                repositories = request.json()['data']['user']['repositories']
+                total_stars += self.stars_counter(repositories['edges'])
+                if not repositories['pageInfo']['hasNextPage']:
+                    return total_stars
+                variables['cursor'] = repositories['pageInfo']['endCursor']
+                self.query_count_increment('graph_repos_stars')
+                request = self.simple_request('graph_repos_stars', query, variables)
 
     def stars_counter(self, data):
         """Count total stars in repositories"""
@@ -221,10 +229,15 @@ class GitHubStatsGenerator:
                 timeout=30
             )
             
+            request.raise_for_status()
             if request.status_code == 200:
+                if request.json().get('errors'):
+                    raise RuntimeError(f"Incomplete commit history for {owner}/{repo_name}")
                 repo_data = request.json()['data']['repository']
                 
-                if not repo_data or not repo_data['defaultBranchRef']:
+                if not repo_data:
+                    raise RuntimeError(f"Repository unavailable: {owner}/{repo_name}")
+                if not repo_data['defaultBranchRef']:
                     logger.debug(f"No default branch for {owner}/{repo_name}")
                     return 0, 0, 0
                     
@@ -235,17 +248,12 @@ class GitHubStatsGenerator:
                 )
                 return loc_result
                 
-            elif request.status_code == 403:
-                logger.error('Rate limit exceeded!')
-                self.force_close_file(data, cache_comment)
-                raise Exception('Too many requests in a short amount of time!')
             else:
-                logger.error(f"Failed to fetch {owner}/{repo_name}: {request.status_code}")
-                return 0, 0, 0
+                raise RuntimeError(f"Unexpected commit history status: {request.status_code}")
                 
         except requests.exceptions.RequestException as e:
             logger.error(f"Request error for {owner}/{repo_name}: {e}")
-            return 0, 0, 0
+            raise
 
     def loc_counter_one_repo(self, owner, repo_name, data, cache_comment, history, addition_total, deletion_total, my_commits):
         """Calculate lines of code statistics for a single repository"""
@@ -325,19 +333,15 @@ class GitHubStatsGenerator:
 
     def process_repo_loc(self, edge, data, cache_comment):
         """Process a single repository's LOC (for parallel execution)"""
-        try:
-            owner, repo_name = edge['node']['nameWithOwner'].split('/')
-            loc = self.recursive_loc(owner, repo_name, data, cache_comment)
-            expected_commits = edge['node']['defaultBranchRef']['target']['history']['totalCount']
-            repo_hash = hashlib.sha256(edge['node']['nameWithOwner'].encode('utf-8')).hexdigest()
-            return (repo_hash, expected_commits, loc)
-        except Exception as e:
-            logger.error(f"Error processing {edge['node']['nameWithOwner']}: {e}")
-            repo_hash = hashlib.sha256(edge['node']['nameWithOwner'].encode('utf-8')).hexdigest()
-            return (repo_hash, 0, (0, 0, 0))
+        owner, repo_name = edge['node']['nameWithOwner'].split('/')
+        loc = self.recursive_loc(owner, repo_name, data, cache_comment)
+        expected_commits = edge['node']['defaultBranchRef']['target']['history']['totalCount']
+        repo_hash = hashlib.sha256(edge['node']['nameWithOwner'].encode('utf-8')).hexdigest()
+        return (repo_hash, expected_commits, loc)
 
     def cache_builder(self, edges, comment_size, force_cache, loc_add=0, loc_del=0):
         """Build and manage cache of repository statistics with parallel processing"""
+        edges = [edge for edge in edges if edge['node'] is not None]
         cached = True
         filename = f'cache/{hashlib.sha256(self.user_name.encode("utf-8")).hexdigest()}.txt'
         
@@ -355,35 +359,38 @@ class GitHubStatsGenerator:
             data = []
             if comment_size > 0:
                 data = ['This line is a comment block. Write whatever you want here.\n'] * comment_size
-            with open(filename, 'w') as f:
-                f.writelines(data)
 
-        if len(data) - comment_size != len(edges) or force_cache:
-            cached = False
-            self.flush_cache(edges, filename, comment_size)
-            
-        with open(filename, 'r') as f:
-            data = f.readlines()
-            
         cache_comment = data[:comment_size]
         data = data[comment_size:]
+        if len(data) != len(edges) or force_cache:
+            cached = False
+            data = [
+                f"{hashlib.sha256(edge['node']['nameWithOwner'].encode('utf-8')).hexdigest()} 0 0 0 0\n"
+                for edge in edges
+            ]
 
         # Collect repos that need updating
         repos_to_update = []
         for index in range(len(edges)):
             repo_hash, commit_count, *__ = data[index].split()
             
-            if repo_hash == hashlib.sha256(edges[index]['node']['nameWithOwner'].encode('utf-8')).hexdigest():
-                try:
-                    expected_commits = edges[index]['node']['defaultBranchRef']['target']['history']['totalCount']
-                    if int(commit_count) != expected_commits:
-                        repos_to_update.append((index, edges[index]))
-                except (TypeError, KeyError) as e:
-                    logger.warning(f"Error processing repo {edges[index]['node']['nameWithOwner']}: {e}")
-                    data[index] = f"{repo_hash} 0 0 0 0\n"
+            expected_hash = hashlib.sha256(edges[index]['node']['nameWithOwner'].encode('utf-8')).hexdigest()
+            if repo_hash != expected_hash:
+                cached = False
+                data[index] = f"{expected_hash} 0 0 0 0\n"
+                commit_count = '0'
+
+            if edges[index]['node']['defaultBranchRef'] is None:
+                cached = False
+                data[index] = f"{expected_hash} 0 0 0 0\n"
+            else:
+                expected_commits = edges[index]['node']['defaultBranchRef']['target']['history']['totalCount']
+                if int(commit_count) != expected_commits:
+                    repos_to_update.append((index, edges[index]))
 
         # Process repos in parallel if there are any to update
         if repos_to_update:
+            cached = False
             logger.info(f"Updating {len(repos_to_update)} repositories in parallel...")
             with ThreadPoolExecutor(max_workers=4) as executor:
                 futures = {
@@ -393,12 +400,9 @@ class GitHubStatsGenerator:
                 
                 for future in as_completed(futures):
                     index = futures[future]
-                    try:
-                        repo_hash, expected_commits, loc = future.result()
-                        data[index] = f"{repo_hash} {expected_commits} {loc[2]} {loc[0]} {loc[1]}\n"
-                        logger.info(f"Updated repo at index {index}")
-                    except Exception as e:
-                        logger.error(f"Failed to update repo at index {index}: {e}")
+                    repo_hash, expected_commits, loc = future.result()
+                    data[index] = f"{repo_hash} {expected_commits} {loc[2]} {loc[0]} {loc[1]}\n"
+                    logger.info(f"Updated repo at index {index}")
 
         with open(filename, 'w') as f:
             f.writelines(cache_comment)
@@ -558,10 +562,10 @@ class GitHubStatsGenerator:
             loc_removed_placeholder_len = len("{{loc_removed}}")
 
             # Format numbers with commas
-            repos_formatted = f"{int(stats['repos']):,}"
-            stars_formatted = f"{int(stats['stars']):,}"
-            commits_formatted = f"{int(stats['commits']):,}"
-            followers_formatted = f"{int(stats['followers']):,}"
+            repos_formatted = f"{int(stats['repos'].replace(',', '')):,}"
+            stars_formatted = f"{int(stats['stars'].replace(',', '')):,}"
+            commits_formatted = f"{int(stats['commits'].replace(',', '')):,}"
+            followers_formatted = f"{int(stats['followers'].replace(',', '')):,}"
             loc_formatted = f"{int(stats['loc'].replace(',', '')):,}"
             loc_added_num = f"{int(stats['loc_added'].replace(',', '')):,}"
             loc_removed_num = f"{int(stats['loc_removed'].replace(',', '')):,}"
